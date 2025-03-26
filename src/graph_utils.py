@@ -31,9 +31,8 @@ class Node:
             print(f"Level {level} nodes: {level_nodes}")
             level += 1
 
-
 def clean_text(text):
-    return re.sub(r'\(\s*(hide|show)\s*\)', '', text).strip()
+    return re.sub(r'\(\s*(hide|show|edit)\s*\)', '', text).strip()
 
 def _extract_top_level_elements(soup, tags):
     res = []
@@ -41,14 +40,13 @@ def _extract_top_level_elements(soup, tags):
 
     while stack:
         node = stack.pop()
-        valid = False
-        for tag in tags:
-            if node.name == tag and not node.find_parent(tag):
-                valid = valid or True
-        if valid:
+
+        if node.name in tags and not any(parent.name == node.name for parent in node.parents):
             res.append(node)
         else:
-            stack.extend(node.find_all(recursion=False))
+            for child in node.children:
+                if hasattr(child, 'name') and child.name is not None:  # Only add element nodes
+                    stack.append(child)
 
     return res
 
