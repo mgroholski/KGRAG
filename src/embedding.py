@@ -76,39 +76,39 @@ def main(filepath: str, visualize: bool, num_lines: int):
             embeddings_file.write(json.dumps(json_arr))
         print("Finished writing embeddings.")
 
-        print("Starting retrieval...")
-        while True:
-            query = input("Query (Type 'exit' to exit): ")
-            if query == "exit":
-                break
+    print("Starting retrieval...")
+    while True:
+        query = input("Query (Type 'exit' to exit): ")
+        if query == "exit":
+            break
 
-            query_tokens = tokenizer(query, language="english")
-            query_embeddings = model.encode(query_tokens)
+        query_tokens = tokenizer(query, language="english")
+        query_embeddings = model.encode(query_tokens)
 
-            top_k = 20
-            min_heap = []
-            for idx, embedding in enumerate(path_embeddings):
-                score = 0
+        top_k = 20
+        min_heap = []
+        for idx, embedding in enumerate(path_embeddings):
+            score = 0
 
-                for q_embedding in query_embeddings:
-                    score += (dot(embedding, q_embedding)) / (norm(embedding) * norm(q_embedding))
+            for q_embedding in query_embeddings:
+                score += (dot(embedding, q_embedding)) / (norm(embedding) * norm(q_embedding))
 
-                score /= len(query_tokens)
-                if not len(min_heap) or score > min_heap[0][0]:
-                    heapq.heappush(min_heap, (score, path_texts[idx]))
+            score /= len(query_tokens)
+            if not len(min_heap) or score > min_heap[0][0]:
+                heapq.heappush(min_heap, (score, path_texts[idx]))
 
-                while len(min_heap) > top_k:
-                    heapq.heappop(min_heap)
+            while len(min_heap) > top_k:
+                heapq.heappop(min_heap)
 
-            stack = []
-            while min_heap:
-                stack.append(heapq.heappop(min_heap))
+        stack = []
+        while min_heap:
+            stack.append(heapq.heappop(min_heap))
 
-            ranking = 1
-            while stack:
-                score, path_text = stack.pop()
-                print(f"Text Rank {ranking}:\n\tText: \"{path_text}\"\n\tScore:{score}\n")
-                ranking += 1
+        ranking = 1
+        while stack:
+            score, path_text = stack.pop()
+            print(f"Text Rank {ranking}:\n\tText: \"{path_text}\"\n\tScore:{score}\n")
+            ranking += 1
 
 
 if __name__=="__main__":
