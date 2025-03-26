@@ -12,9 +12,13 @@ class Node:
         self.value = value
         self.type = type
         self.adj = [] if not adj else adj
+        self.data = []
 
     def add_adj(self, node):
         self.adj.append(node)
+
+    def add_data(self, data):
+        self.data.append(data)
 
     def print_graph(self):
         level = 0
@@ -24,7 +28,7 @@ class Node:
             level_nodes = []
             for _ in range(len(queue)):
                 u = queue.pop(0)
-                level_nodes.append(u.value)
+                level_nodes.append((u.value, u.data))
                 for v in u.adj:
                     queue.append(v)
 
@@ -54,11 +58,11 @@ def _extract_relationship_graph(node_soup):
     res = []
     if node_soup.name == "table":
         table_rows = list(reversed(_extract_top_level_elements(node_soup, ["tr"])))
-
         cur_node = None
         data_between = False
         for row in table_rows:
             results = _extract_relationship_graph(row)
+            results.reverse()
             if len(results) == 1 and results[0].type == NodeTagType.TH:
                 if not cur_node or data_between:
                     cur_node = results[0]
@@ -68,13 +72,17 @@ def _extract_relationship_graph(node_soup):
                     cur_node.value += results[0].value
             else:
                 data_between = True
+                last_head = None
                 for result in results:
                     if result.type == NodeTagType.TH:
                         if cur_node:
                             cur_node.add_adj(result)
                         else:
                             res.append(result)
-
+                        last_head = result
+                    elif result.type == NodeTagType.TD:
+                        if last_head:
+                            last_head.add_data(result.value)
     elif node_soup.name == "tr":
         elements = _extract_top_level_elements(node_soup, ["th", "th_colspan", "table", "td"])
         for element in elements:

@@ -4,7 +4,6 @@ import text_utils
 import os
 
 # Data Download Link: https://ai.google.com/research/NaturalQuestions/download
-
 write_operations = 0
 lines = 0
 
