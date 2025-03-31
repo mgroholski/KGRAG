@@ -11,11 +11,6 @@ def main(datapath:str, storepath:str):
 
 
 
-
-
-
-
-
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Embeds the table data and stores within a vector database.")
     parser.add_argument('datapath')
