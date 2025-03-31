@@ -1,9 +1,6 @@
 from bs4 import BeautifulSoup
 from enum import Enum
 import re
-from collections import deque
-
-from bs4.element import NavigableString
 
 class NodeTagType(Enum):
     TH = 'th'
@@ -118,7 +115,7 @@ def _extract_table_graph(soup, root=None):
                 elif element.name == "td":
                     if len(col_headings):
                         col_headings[data_idx].data.append(element.text)
-                        data_idx += 1
+                        data_idx = ((data_idx + 1) % len(col_headings))
                     else:
                         if row_heading:
                             row_heading.data.append(element.text)
@@ -138,7 +135,7 @@ def _extract_table_graph(soup, root=None):
             for col_heading in col_headings:
                 cur_parent.add_adj(col_heading)
         else:
-            print(f"Found col_headings before parent: {soup}")
+            print(f"End: Found col_headings before parent: {soup}")
             exit()
 
     return root
@@ -171,8 +168,6 @@ def extract_relationship_graphs(simple_text: str):
                 cur_section.add_adj(n)
                 cur_table_section = n
         else:
-            table_node = _extract_table_graph(tag)
-            if table_node:
-                cur_table_section.add_adj(table_node)
+            _extract_table_graph(tag, cur_table_section)
 
     return root
