@@ -5,7 +5,7 @@ class GoogleAgent:
         self.ky = apikey
         # Configure the API with the provided key
         genai.configure(api_key=self.ky)
-        # Initialize the Gemini model (using Gemini Pro by default)
+        # Initialize the Gemini model
         self.model = genai.GenerativeModel('models/gemini-2.0-flash')
 
     def ask(self, query, max_length=None):

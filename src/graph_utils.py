@@ -62,6 +62,7 @@ def _extract_table_graph(soup, root=None):
     col_headings = []
 
     data_between = True
+    found_head = False
     for row in table_rows:
         row_table = row.find("table")
         if row_table:
@@ -92,8 +93,10 @@ def _extract_table_graph(soup, root=None):
 
                 if data_between:
                     head_node = Node(_clean_text(element.text), NodeTagType.TH_COLSPAN)
-                    if not root:
+                    # Use root from this function call.
+                    if not found_head:
                         root = head_node
+                        found_head = True
                     else:
                         root.add_adj(head_node)
                     cur_parent = head_node
@@ -101,6 +104,8 @@ def _extract_table_graph(soup, root=None):
                 else:
                     cur_parent.value += " " + _clean_text(element.text)
         else:
+            # Use root from last function call.
+            found_head = True
             data_between = True
             row_heading = None
             data_idx = 0
@@ -168,6 +173,8 @@ def extract_relationship_graphs(simple_text: str):
                 cur_section.add_adj(n)
                 cur_table_section = n
         else:
-            _extract_table_graph(tag, cur_table_section)
+            subroot = _extract_table_graph(tag, cur_table_section)
+            if subroot != cur_table_section:
+                cur_table_section.add_adj(subroot)
 
     return root

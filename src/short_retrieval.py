@@ -12,7 +12,6 @@ import re
 from graph_utils import NodeTagType
 from retriever import Retriever
 from google_agent import GoogleAgent
-from BERTScore import calculate_bert_score
 
 def load_model():
     model = SentenceTransformer('all-mpnet-base-v2')
@@ -72,7 +71,7 @@ def main(filepath: str, visualize: bool, num_lines: int, test_mode: bool, key: s
                     except Exception as e:
                         print(e)
                         visualize_graph_with_cycle_detection(page_graph)
-                    exit()
+                        exit()
 
                 # Paths from source to leaf
                 path_texts_and_data = []
@@ -188,12 +187,46 @@ def main(filepath: str, visualize: bool, num_lines: int, test_mode: bool, key: s
             avg_recall = sum(recall_scores) / len(recall_scores) if recall_scores else 0
             avg_f1 = sum(f1_scores) / len(f1_scores) if f1_scores else 0
 
+            print("Similarity Scores: ", similarity_scores)
             print(f"\nOverall BERTScore Statistics:")
             print(f"Average Precision: {avg_precision:.4f}")
             print(f"Average Recall: {avg_recall:.4f}")
             print(f"Average F1 Score: {avg_f1:.4f}")
 
+            # After calculating avg_precision, avg_recall, avg_f1
+            # Create a summary table for total averages
+            print("\nCreating summary table for overall averages...")
+            fig, ax = plt.subplots(figsize=(6, 3), dpi=100)
 
+            # Table data
+            table_data = [
+                ['Metric', 'Average Value'],
+                ['Precision', f'{avg_precision:.4f}'],
+                ['Recall', f'{avg_recall:.4f}'],
+                ['F1 Score', f'{avg_f1:.4f}']
+            ]
+
+            # Create table
+            table = plt.table(cellText=table_data,
+                              colWidths=[0.3, 0.3],
+                              loc='center',
+                              cellLoc='center')
+
+            # Style the table
+            table.auto_set_font_size(False)
+            table.set_fontsize(12)
+            table.scale(1.2, 1.5)
+
+            # Hide axis
+            ax.axis('off')
+
+            # Add a title
+            plt.title('BERTScore Summary Statistics', pad=20)
+
+            # Save the table
+            plt.savefig('./output/bertscore_summary_table.png', bbox_inches='tight')
+            plt.close()
+            print("Created summary table image")
     else:
         while True:
             query = input("Query (Type 'exit' to exit): ")
