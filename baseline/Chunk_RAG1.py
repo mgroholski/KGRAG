@@ -59,7 +59,7 @@ def generate_answer_with_gpt(question, relevant_chunks):
         print("Error generating answer:", e)
         return "Error."
 
-# --- Pre-processing: Read, chunk, and store (without ID key) ---
+# --- Pre-processing: Read, chunk, and store ---
 try:
     data = pd.read_json(input_file, lines=True, nrows=max_examples)
 except Exception as e:
