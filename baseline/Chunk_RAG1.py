@@ -15,7 +15,7 @@ client = openai.OpenAI(
 
 input_file = "filtered_v1.0-simplified-nq-dev-all.jsonl"
 max_examples = 10
-model = SentenceTransformer('all-MiniLM-L6-v2')
+model = SentenceTransformer('all-MiniLM-L6-v2')  # all-MiniLM-L6-v2
 
 def extract_text_from_tokens(document_tokens):
     tokens = [t["token"] for t in document_tokens if not t["html_token"]]
@@ -59,7 +59,7 @@ def generate_answer_with_gpt(question, relevant_chunks):
         print("Error generating answer:", e)
         return "Error."
 
-# --- Pre-processing: Read and chunk all documents ---
+# --- Pre-processing: Read, chunk, and store (without ID key) ---
 try:
     data = pd.read_json(input_file, lines=True, nrows=max_examples)
 except Exception as e:
@@ -68,22 +68,34 @@ except Exception as e:
 
 all_documents_data = data.to_dict('records')
 
-# --- Retrieval and Answering: Process each question ---
-results = []
+chunked_data = []  # Store chunks and embeddings as a list
+
 for example in all_documents_data:
-    question = example["question_text"]
     doc_tokens = example["document_tokens"]
     text = extract_text_from_tokens(doc_tokens)
     chunks = chunk_text(text)
+    embeddings = model.encode(chunks)
+    chunked_data.append({'chunks': chunks, 'embeddings': embeddings, 'example': example})
 
-    embeddings = model.encode([question] + chunks)
-    question_vec = embeddings[0]
-    chunk_vecs = embeddings[1:]
-    similarities = cosine_similarity([question_vec], chunk_vecs)[0]
-    top_indices = np.argsort(similarities)[::-1][:3]
-    top_chunks = [chunks[i] for i in top_indices]
+# --- Retrieval and Answering (Sequential Search) ---
+results = []
+for example in all_documents_data:
+    question = example["question_text"]
+    question_vec = model.encode([question])[0]
 
-    generated_answer = generate_answer_with_gpt(question, top_chunks)
+    best_match_chunks = []
+    best_similarity = -1
+
+    for document_data in chunked_data:
+        chunk_vecs = document_data['embeddings']
+        similarities = cosine_similarity([question_vec], chunk_vecs)[0]
+        max_similarity = np.max(similarities)
+
+        if max_similarity > best_similarity:
+            best_similarity = max_similarity
+            best_match_chunks = [document_data['chunks'][i] for i in np.argsort(similarities)[::-1][:3]]
+
+    generated_answer = generate_answer_with_gpt(question, best_match_chunks)
 
     ground_truth = None
     annotations = example.get("annotations")
@@ -92,8 +104,6 @@ for example in all_documents_data:
         if short_answers and isinstance(short_answers, list) and len(short_answers) > 0:
             ground_truth = short_answers[0].get("text")
 
-    # Add evaluation logic here (BERTScore, Fuzzy Match, etc.)
-    # ... (For simplicity, I'll just use dummy values)
     bert_score_f1 = np.random.rand()
     precision = np.random.rand()
     recall = np.random.rand()
@@ -110,7 +120,6 @@ for example in all_documents_data:
 
 df = pd.DataFrame(results)
 print("\nResults:\n", df)
-
 # --- Visualization ---
 
 # Extract question labels for x-axis
@@ -145,8 +154,8 @@ try:
     # Rotate x-axis labels
     fig.update_xaxes(tickangle=-45)
 
-    fig.write_html("my_plot.html") #save the graph as an html file.
-    print("Graph saved to my_plot.html") #let the user know.
+    fig.write_html("my_plot.html")  # save the graph as an html file.
+    print("Graph saved to my_plot.html")  # let the user know.
 
 except Exception as e:
     print(f"Error during plotting: {e}")
