@@ -78,10 +78,11 @@ for example in all_documents_data:
     chunked_data.append({'chunks': chunks, 'embeddings': embeddings, 'example': example})
 
 # --- Retrieval and Answering (Sequential Search) ---
+
 results = []
 for example in all_documents_data:
     question = example["question_text"]
-    question_vec = model.encode([question])[0]
+    question_vec = model.encode(question)
 
     best_match_chunks = []
     best_similarity = -1
@@ -120,8 +121,19 @@ for example in all_documents_data:
 
 df = pd.DataFrame(results)
 print("\nResults:\n", df)
-# --- Visualization ---
 
+# Calculate average stats
+avg_f1 = df['BERTScore F1'].mean()
+avg_precision = df['Precision'].mean()
+avg_recall = df['Recall'].mean()
+
+print("\nResults:\n", df)
+print("\nAverage Statistics:")
+print(f"Average BERTScore F1: {avg_f1:.3f}")
+print(f"Average Precision: {avg_precision:.3f}")
+print(f"Average Recall: {avg_recall:.3f}")
+
+# --- Visualization ---
 # Extract question labels for x-axis
 questions = [f"Q{i + 1}" for i in range(len(df))]
 
