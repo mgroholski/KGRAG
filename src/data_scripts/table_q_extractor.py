@@ -1,7 +1,7 @@
 import json
 import argparse
-import text_utils
 import os
+from utils import text_utils
 
 # Data Download Link: https://ai.google.com/research/NaturalQuestions/download
 write_operations = 0
@@ -25,7 +25,7 @@ with open(args.filepath, "r") as file:
                 long_answer = annotation["long_answer"]
                 start_token, end_token = long_answer["start_token"], long_answer["end_token"]
                 answer_text = " ".join(tokens[start_token:end_token])
-                if "<Table>" in answer_text and len(annotation["short_answers"]) > 0:
+                if "<Table>" in answer_text:
                     write_operations += 1
                     write_file.write(line)
                     break
