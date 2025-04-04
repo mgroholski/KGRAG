@@ -8,9 +8,12 @@ class Logger:
             exit()
 
     def log(self, msg):
-        self.write_file.write(msg)
+        self.write_file.write(msg + "\n")
         pass
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def close(self):
         print("Closing output file...")
         self.write_file.close()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()

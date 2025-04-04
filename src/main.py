@@ -1,23 +1,25 @@
 import argparse, os, nltk
 from sentence_transformers.SentenceTransformer import SentenceTransformer
-from kg import retriever as kg_retriever
+from kgrag.retriever import Retriever as kg_retriever
+from chunkrag.retriever import Retriever as chunk_retriever
 from nltk.tokenize import sent_tokenize
 from logger import Logger
 from utils import text_utils
 import json
 from agents.google_agent import GoogleAgent
 from stats import BERTScore
+import visualizations.plots as plots
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Embeds the table data and allows for path retrieval.")
     parser.add_argument('filepath')
     parser.add_argument('--pipeline','-p', default="kg", choices=["kg","chunk","vanilla"], help="The pipeline to run on.")
-    parser.add_argument('--agent', '-a', default="google", choice=["google"], help="Specifies which agent to use to test.")
+    parser.add_argument('--agent', '-a', default="google", choices=["google"], help="Specifies which agent to use to test.")
     parser.add_argument('--verbose', '-v', action='store_true', help="Verbose. Enables graph visualizations and prints distances rankings.")
     parser.add_argument('--num-lines', '-n', type=int, default=None, help="Number of elements to load from the input file (default: All lines).")
     parser.add_argument('--test', '-t', action='store_true', help="Enables QA test mode. Runs the selected pipeline against the ground truth.")
     parser.add_argument('--key', type=str, help="API Key for LLM agent.")
-    parser.add_arguement("--storepath", type=str, default=None, help="The folder path of that contains the embedding and JSON store to read/write to.")
+    parser.add_argument("--storepath", type=str, default=None, help="The folder path of that contains the embedding and JSON store to read/write to.")
     args = parser.parse_args()
 
     '''
@@ -30,10 +32,11 @@ if __name__=="__main__":
     if not os.path.exists('./output'):
         os.makedirs('./output')
 
-    logger = Logger(f"./output/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}")
+    logger = Logger(f"./output/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}.log")
 
     # Loads the models and the retriever for the specified pipeline.
     nltk.download('punkt_tab', download_dir=os.getcwd())
+    nltk.download('punkt', download_dir=os.getcwd())
     nltk.data.path.append(os.getcwd())
     embedding_info = {
         "model": SentenceTransformer("all-mpnet-base-v2"),
@@ -48,11 +51,10 @@ if __name__=="__main__":
     retriever = None
     if args.pipeline == 'kg':
         logger.log("Initializing the KG-RAG pipeline...")
-        retriever = kg_retriever(embedding_info, store_info, args.visualize)
+        retriever = kg_retriever(embedding_info, store_info, args.verbose)
     elif args.pipeline == 'chunk':
         logger.log("Initializing the ChunkRAG pipeline...")
-        # TODO: Write chunk rag
-        raise NotImplementedError()
+        retriever = chunk_retriever(embedding_info, store_info, args.verbose)
     elif args.pipeline == 'vanilla':
         logger.log("Initializing the VanillaRAG pipeline...")
         # TODO: Add vanilla rag
@@ -84,7 +86,7 @@ if __name__=="__main__":
                 # Read more about the dataset tasks: https://github.com/google-research-datasets/natural-questions
                 if args.test:
                     line_question = simple_nq["question_text"]
-                    long_answer_data = simple_nq["annotation"][0]["long_answer"]
+                    long_answer_data = simple_nq["annotations"][0]["long_answer"]
                     line_long_answer_text = "".join(text_utils.get_nq_tokens(simple_nq)[long_answer_data["start_token"] : long_answer_data["end_token"]])
                     qa_list.append((line_question,line_long_answer_text))
 
@@ -97,12 +99,17 @@ if __name__=="__main__":
         logger.log("Beginning QA tests...")
         key = args.key
 
-        agent = GoogleAgent(key)
+        agent = None
+
+        if args.agent == "google":
+            agent = GoogleAgent(key)
+        else:
+            raise NotImplementedError(f"Could not initialize LLM agent for {args.agent}.")
 
         results = []
         for question, ground_truth_retrieve in qa_list:
             # Generate ground truth.
-            nq_query = f"""
+            nq_query = f"""Use only the context to answer the query.
             CONTEXT:
                 {ground_truth_retrieve}
 
@@ -114,10 +121,11 @@ if __name__=="__main__":
 
             # Generate retrieval answer.
             retrieve_list = retriever.retrieve(question)
-            retrieval_query = ""
+            retrieval_query = "Use only the context to answer the query. "
             if args.pipeline == "kg":
                 retrieval_query += "We will provide data as context with an associated path of headings that lead to where to the data is located.\n"
-            retrieval_query += """CONTEXT:\n"""
+            retrieval_query += """
+            CONTEXT:\n"""
             if args.pipeline == "kg":
                 for path, data in retrieve_list:
                     retrieval_query += f"PATH: {path}. DATA: {data}\n"
@@ -140,6 +148,9 @@ if __name__=="__main__":
             # Computes stats about the answers.
             bert_scores = BERTScore.calculate_bert_score([retrieval_answer], [nq_answer])
             results.append(bert_scores)
+
+        print("Making graphs...")
+        plots.BERTScore_plts(results, f"./output/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}")
     else:
         logger.log("Beginning user QA retrieval...")
         while True:
@@ -150,3 +161,6 @@ if __name__=="__main__":
             retrieve_list = retriever.retrieve(query)
             for idx, item in enumerate(retrieve_list):
                 print(f"Rank {idx}:\n\t Data: {item}")
+
+    logger.close()
+    retriever.close()
