@@ -33,19 +33,20 @@ class Retriever:
             else:
                 cur_chunk_embedding = self.model.encode(cur_chunk)
                 token_embedding = self.model.encode(token)
-                if cosine_similarity(cur_chunk_embedding, token_embedding) > 0.7 and len(cur_chunk) + len(token) + 1 < 500:
+                if cosine_similarity(cur_chunk_embedding, token_embedding) >= 0.7 and len(cur_chunk) + len(token) + 1 < 500:
                     cur_chunk += f" {token}"
                 else:
                     chunks.append(cur_chunk)
                     cur_chunk = token
+        chunks.append(cur_chunk)
 
         for chunk in chunks:
-            chunk_embedding = self.model.encode([chunk])
-            self.store.write(chunk_embedding, chunk)
+            chunk_embeddings = self.model.encode([chunk,])
+            self.store.write(chunk_embeddings, chunk)
 
     def retrieve(self, query):
         #TODO: Implement hybrid retrieval and advanced filtering
-        q_embedding = self.model.encode(query)
+        q_embedding = self.model.encode([query])
         retrieve_obj_list = self.store.nn_query(q_embedding, 10)
         return retrieve_obj_list
 

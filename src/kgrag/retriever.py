@@ -60,7 +60,7 @@ class Retriever:
     def retrieve(self, query):
         #TODO: Do we need to tokenize the query?
         # q_tokens = self.tokenizer(query, language="english")
-        q_embeddings = self.model.encode(query)
+        q_embeddings = self.model.encode([query])
         retrieve_obj_list = self.store.nn_query(q_embeddings, 10)
         return [(obj["path"], obj["data"]) for obj in retrieve_obj_list]
 
