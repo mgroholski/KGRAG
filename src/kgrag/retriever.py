@@ -5,7 +5,7 @@ import re
 from kgrag.graph_utils import NodeTagType
 
 class Retriever:
-    def __init__(self, embedding_dict, store_dict, verbose=False):
+    def __init__(self, embedding_dict, store_dict, agent, verbose=False):
         if "model" in embedding_dict and "tokenizer" in embedding_dict and "model_dim" in embedding_dict:
             self.model = embedding_dict["model"]
             self.tokenizer = embedding_dict["tokenizer"]
@@ -19,6 +19,7 @@ class Retriever:
             raise Exception("Could not read store dictionary information. Please format correctly.")
 
         self.visualize = verbose
+        self.agent = agent
     def embed(self, corpus):
         '''
         1. Create knowledge graph from corpus

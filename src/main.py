@@ -34,6 +34,13 @@ if __name__=="__main__":
 
     logger = Logger(f"./output/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}.log")
 
+    key = args.key
+    agent = None
+    if args.agent == "google":
+        agent = GoogleAgent(key)
+    else:
+        raise NotImplementedError(f"Could not initialize LLM agent for {args.agent}.")
+
     # Loads the models and the retriever for the specified pipeline.
     nltk.download('punkt_tab', download_dir=os.getcwd())
     nltk.download('punkt', download_dir=os.getcwd())
@@ -51,10 +58,10 @@ if __name__=="__main__":
     retriever = None
     if args.pipeline == 'kg':
         logger.log("Initializing the KG-RAG pipeline...")
-        retriever = kg_retriever(embedding_info, store_info, args.verbose)
+        retriever = kg_retriever(embedding_info, store_info, agent, args.verbose)
     elif args.pipeline == 'chunk':
         logger.log("Initializing the ChunkRAG pipeline...")
-        retriever = chunk_retriever(embedding_info, store_info, args.verbose)
+        retriever = chunk_retriever(embedding_info, store_info, agent, args.verbose)
     elif args.pipeline == 'vanilla':
         logger.log("Initializing the VanillaRAG pipeline...")
         # TODO: Add vanilla rag
@@ -98,14 +105,6 @@ if __name__=="__main__":
 
     if args.test:
         logger.log("Beginning QA tests...")
-        key = args.key
-
-        agent = None
-
-        if args.agent == "google":
-            agent = GoogleAgent(key)
-        else:
-            raise NotImplementedError(f"Could not initialize LLM agent for {args.agent}.")
 
         results = []
         for question, ground_truth_retrieve in qa_list:

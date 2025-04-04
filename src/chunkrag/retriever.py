@@ -1,7 +1,7 @@
 from utils.store_utils import Store
 import numpy as np
 class Retriever:
-    def __init__(self, embedding_dict, store_dict, verbose=False):
+    def __init__(self, embedding_dict, store_dict, agent, verbose=False):
         if "model" in embedding_dict and "tokenizer" in embedding_dict and "model_dim" in embedding_dict:
             self.model = embedding_dict["model"]
             self.tokenizer = embedding_dict["tokenizer"]
@@ -13,6 +13,8 @@ class Retriever:
             self.store = Store(self.model_dim, store_dict["storepath"], verbose)
         else:
             raise Exception("Could not read store dictionary information. Please format correctly.")
+
+        self.agent = agent
 
     def embed(self, corpus):
         def cosine_similarity(vec1, vec2):
