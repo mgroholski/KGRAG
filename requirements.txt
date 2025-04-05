@@ -27,15 +27,15 @@ idna==3.10
 jedi==0.19.2
 Jinja2==3.1.6
 joblib==1.4.2
--e git+https://github.com/mgroholski/graph-rag.git@1ac15a2c884ab3ef4ba5a5d3c27563fd6d4dec51#egg=KGRAG
+-e git+https://github.com/mgroholski/graph-rag.git@022df6a7554d613921034ea57c477616c35035b5#egg=KGRAG
 kiwisolver==1.4.8
 lxml==5.3.1
 MarkupSafe==3.0.2
 matplotlib==3.10.1
 mpmath==1.3.0
 networkx==3.4.2
-nltk==3.9.1
-numpy @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a51i_mbs7m/croot/numpy_and_numpy_base_1708638620867/work/dist/numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl#sha256=37afb6b734a197702d848df93bd67c10b52f6467d56e518950d84b6b1c949d27
+nltk==3.8.1
+numpy==1.26.3
 packaging @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_a6_qk3qyg7/croot/packaging_1734472142254/work
 pandas==2.2.3
 parso==0.8.4
@@ -55,7 +55,7 @@ requests==2.32.3
 rsa==4.9
 safetensors==0.5.3
 scikit-learn==1.6.1
-scipy==1.15.2
+scipy==1.12.0
 sentence-transformers==3.4.1
 setuptools==75.8.0
 six==1.17.0
