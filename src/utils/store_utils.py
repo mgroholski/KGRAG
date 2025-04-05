@@ -52,7 +52,6 @@ class Store:
         distances, indices = (D[lims[idx]:lims[idx+1]], I[lims[idx]:lims[idx+1]])
         return self._extract_chunks(distances, indices)
 
-
     def _get_avg_embedding(self, q_embeddings):
         return np.mean(q_embeddings, axis=0, keepdims=True)
 

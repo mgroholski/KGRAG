@@ -46,7 +46,12 @@ class Retriever:
             chunk_embeddings = self.model.encode([chunk,])
             self.store.write(chunk_embeddings, chunk)
 
-    def retrieve(self, query):
+    def retrieve(self, query)->list[str]:
+        '''
+        Parameters:  query - Natural language question being utilized for retrieval.
+        Return: A list of strings of chunks to put into context.
+        '''
+
         #TODO: Implement hybrid retrieval and advanced filtering
         q_embedding = self.model.encode([query])
         retrieve_obj_list = self.store.nn_query(q_embedding, 10)
