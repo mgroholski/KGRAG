@@ -67,6 +67,8 @@ class Store:
 
     def close(self):
         if self.folder_path:
+            if not os.path.exists(self.folder_path):
+                os.makedirs(self.folder_path)
             faiss_path = os.path.join(self.folder_path, "embeddings.index")
             faiss.write_index(self.index, faiss_path)
             metadata_path = os.path.join(self.folder_path, "metadata.json")

@@ -7,8 +7,7 @@ from logger import Logger
 from utils import text_utils
 import json
 from agents.google_agent import GoogleAgent
-from stats import BERTScore
-import visualizations.plots as plots
+from stats import BERTScore, CHRF, BLEURT
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Embeds the table data and allows for path retrieval.")
@@ -20,6 +19,8 @@ if __name__=="__main__":
     parser.add_argument('--test', '-t', action='store_true', help="Enables QA test mode. Runs the selected pipeline against the ground truth.")
     parser.add_argument('--key', type=str, help="API Key for LLM agent.")
     parser.add_argument("--storepath", type=str, default=None, help="The folder path of that contains the embedding and JSON store to read/write to.")
+    parser.add_argument("--operation", default="w", choices=["r", "w"], help="Specifies the operation to perform on the store. Options: r (read), w (write).")
+    parser.add_argument('--metric', default="BERTScore", choices=["BERTScore", "BLEURT", "chrF"], help="Specifies the metric to use for evaluation. Options: BERTScore, ROUGE-L, SBERT, BLEURT, chrF.")
     args = parser.parse_args()
 
     '''
@@ -32,7 +33,7 @@ if __name__=="__main__":
     if not os.path.exists('./output'):
         os.makedirs('./output')
 
-    logger = Logger(f"./output/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}.log")
+    logger = Logger(f"./output/{args.pipeline}_{args.metric}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}.log")
 
     key = args.key
     agent = None
@@ -99,14 +100,26 @@ if __name__=="__main__":
                     qa_list.append((line_question,line_long_answer_text))
 
                 line_document = simple_nq["document_text"]
-                retriever.embed(line_document)
+                if args.operation == "w":
+                    retriever.embed(line_document)
             else:
                 break
 
     if args.test:
         logger.log("Beginning QA tests...")
 
-        results = []
+        metric = None
+        if args.metric == "BERTScore":
+            metric = BERTScore.BERTScore(logger)
+        elif args.metric == "BLEURT":
+            metric = BLEURT.BLEURT(logger)
+        elif args.metric == "chrF":
+            metric = CHRF.chrF(logger)
+        else:
+            raise NotImplementedError()
+
+
+        responses = []
         for question, ground_truth_retrieve in qa_list:
             # Generate ground truth.
             nq_query = f"""Use only the context to answer the query.
@@ -145,12 +158,15 @@ if __name__=="__main__":
             logger.log(f"{args.pipeline} Query: {retrieval_query}")
             logger.log(f"{args.pipeline} Answer: {retrieval_answer}")
 
-            # Computes stats about the answers.
-            bert_scores = BERTScore.calculate_bert_score([retrieval_answer], [nq_answer])
-            results.append(bert_scores)
+            responses.append((retrieval_answer, nq_answer))
+            if not len(responses) % 10:
+                print(f"{len(responses)} responses.")
 
+        # Computes stats about the answers.
+        candidates, truths = zip(*responses)
+        metric.score(candidates, truths)
         print("Making graphs...")
-        plots.BERTScore_plts(results, f"./output/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}")
+        metric.plt(f"./output/{args.metric}/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}")
     else:
         logger.log("Beginning user QA retrieval...")
         while True:
