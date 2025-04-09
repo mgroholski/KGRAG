@@ -23,13 +23,6 @@ if __name__=="__main__":
     parser.add_argument('--metric', default="BERTScore", choices=["BERTScore", "BLEURT", "chrF"], help="Specifies the metric to use for evaluation. Options: BERTScore, ROUGE-L, SBERT, BLEURT, chrF.")
     args = parser.parse_args()
 
-    '''
-    1. Parse the file.
-    2. Store chunks and data in store.
-    3. Use retriever to run QA.
-    4. Produce data graphs
-    '''
-
     if not os.path.exists('./output'):
         os.makedirs('./output')
 
