@@ -20,7 +20,7 @@ if __name__=="__main__":
     parser.add_argument('--key', type=str, help="API Key for LLM agent.")
     parser.add_argument("--storepath", type=str, default=None, help="The folder path of that contains the embedding and JSON store to read/write to.")
     parser.add_argument("--operation", default="w", choices=["r", "w"], help="Specifies the operation to perform on the store. Options: r (read), w (write).")
-    parser.add_argument('--metric', default="BERTScore", choices=["BERTScore", "BLEURT", "chrF"], help="Specifies the metric to use for evaluation. Options: BERTScore, ROUGE-L, SBERT, BLEURT, chrF.")
+    parser.add_argument('--metric', default="BERTScore", choices=["BERTScore", "BLEURT", "chrF"], help="Specifies the metric to use for evaluation. Options: BERTScore, BLEURT, and chrF.")
     args = parser.parse_args()
 
     if not os.path.exists('./output'):
