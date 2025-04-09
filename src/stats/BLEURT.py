@@ -2,11 +2,50 @@ import numpy as np
 import matplotlib.pyplot as plt
 from bleurt import score as bleurt_score
 import os
+import subprocess
+import sys
 
 class BLEURT:
     def __init__(self, logger):
         self.scores = []
         self.logger = logger
+        self.model_path = "./models/BLEURT-20"
+        self._check_model()
+
+    def _check_model(self):
+        """
+        Check if the BLEURT model exists and download it if it doesn't.
+        """
+        try:
+            if not os.path.exists(self.model_path):
+                self.logger.log(f"BLEURT model not found at {self.model_path}. Downloading...")
+
+                # Create the models directory if it doesn't exist
+                os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
+
+                # Use pip to install the BLEURT model
+                cmd = [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-deps",
+                    "https://storage.googleapis.com/bleurt-oss-21/BLEURT-20.zip"
+                ]
+
+                self.logger.log("Running command: " + " ".join(cmd))
+                result = subprocess.run(cmd, capture_output=True, text=True)
+
+                if result.returncode != 0:
+                    self.logger.log(f"Error downloading BLEURT model: {result.stderr}")
+                    raise Exception("Failed to download BLEURT model")
+
+                self.logger.log("BLEURT model downloaded successfully")
+            else:
+                self.logger.log(f"BLEURT model found at {self.model_path}")
+        except Exception as e:
+            self.logger.log(f"Error checking/downloading BLEURT model: {str(e)}")
+            raise
 
     def score(self, predictions, truths):
         """
@@ -21,7 +60,7 @@ class BLEURT:
         """
         try:
             self.logger.log("Computing BLEURT scores...")
-            scorer = bleurt_score.BleurtScorer()
+            scorer = bleurt_score.BleurtScorer(self.model_path)
             scores = scorer.score(references=truths, candidates=predictions)
             self.scores = scores
             avg_score = sum(scores) / len(scores)

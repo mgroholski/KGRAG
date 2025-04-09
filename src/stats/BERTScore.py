@@ -14,6 +14,7 @@ class BERTScore:
         self.scores = []
         self.logger = logger
         self.lang = lang
+        self.model = "microsoft/deberta-xlarge-mnli"
 
     def score(self, predictions, truths):
         """
@@ -31,7 +32,7 @@ class BERTScore:
                 continue
 
             try:
-                P, R, F1 = bert_score([pred], [ref], lang=self.lang, verbose=False)
+                P, R, F1 = bert_score([pred], [ref], model_type=self.model, lang=self.lang, verbose=False)
 
                 score = {
                     'bert_precision': P.mean().item(),
