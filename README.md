@@ -29,7 +29,7 @@ python3 src/main.py <filepath> [options]
 
 Run KG-RAG pipeline on 100 examples using Google agent with test mode:
 ```bash
-python src/main.py data/nq_examples.jsonl --pipeline kg --agent google --num-lines 100 --test --key YOUR_API_KEY
+python3 src/main.py data/nq_examples.jsonl --pipeline kg --agent google --num-lines 100 --test --key YOUR_API_KEY
 ```
 
 Run 250 questions using ChunkRAG with the BERTScore metric and reading from previously stored folder.
