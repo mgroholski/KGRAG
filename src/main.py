@@ -84,14 +84,17 @@ if __name__=="__main__":
                 line_json = json.loads(line)
                 simple_nq = text_utils.simplify_nq_example(line_json)
 
-                # Extracts correct context (first long answer) and question.
+                # Extracts correct context (first non-empty long answer) and question.
                 # Read more about the dataset tasks: https://github.com/google-research-datasets/natural-questions
                 if args.test:
                     line_question = simple_nq["question_text"]
-                    long_answer_data = simple_nq["annotations"][0]["long_answer"]
-                    line_long_answer_text = "".join(text_utils.get_nq_tokens(simple_nq)[long_answer_data["start_token"] : long_answer_data["end_token"]])
-                    qa_list.append((line_question,line_long_answer_text))
-
+                    for idx in range(len(simple_nq["annotations"])):
+                        long_answer_data = simple_nq["annotations"][idx]["long_answer"]
+                        start_token_idx, end_token_idx = (long_answer_data["start_token"], long_answer_data["end_token"])
+                        if start_token_idx != end_token_idx:
+                            line_long_answer_text = "".join(text_utils.get_nq_tokens(simple_nq)[start_token_idx : end_token_idx])
+                            qa_list.append((line_question,line_long_answer_text))
+                            break
                 line_document = simple_nq["document_text"]
                 if args.operation == "w":
                     retriever.embed(line_document)
