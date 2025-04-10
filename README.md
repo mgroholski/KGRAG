@@ -1,7 +1,7 @@
 # KG-RAG
 
 ## Dataset
-We utilize NQ Table which is a subset of NQ. The NQ data can be downloaded at [Google AI](https://ai.google.com/research/NaturalQuestions/download). We filter this table to utilize questions that derive their answers
+We utilize NQ Table which is a subset of NQ. The NQ data can be downloaded at [Google AI](https://ai.google.com/research/NaturalQuestions/download). We filter this dataset to utilize questions that derive their answers
 from tables (`src/data_scripts/table_q_extractor.py`).
 
 ## Usage

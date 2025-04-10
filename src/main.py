@@ -113,7 +113,7 @@ if __name__=="__main__":
 
 
         responses = []
-        for question, ground_truth_retrieve in qa_list:
+        for idx,(question, ground_truth_retrieve) in enumerate(qa_list):
             # Generate ground truth.
             nq_query = f"""Use only the context to answer the query.
             CONTEXT:
@@ -146,6 +146,7 @@ if __name__=="__main__":
             retrieval_answer = agent.ask(retrieval_query, max_length = 500)
 
             # Logs the response of the query.
+            logger.log(f"Question {idx + 1}")
             logger.log(f"NQ Query: {nq_query}")
             logger.log(f"NQ Answer: {nq_answer}")
             logger.log(f"{args.pipeline} Query: {retrieval_query}")
