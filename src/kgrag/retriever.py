@@ -61,7 +61,7 @@ class Retriever:
     def retrieve(self, query):
         # q_tokens = self.tokenizer(query, language="english")
         q_embeddings = self.model.encode([query])
-        retrieve_obj_list = self.store.nn_query(q_embeddings, 50)
+        retrieve_obj_list = self.store.nn_query(q_embeddings, 10)
         return [(obj["path"], obj["data"]) for obj in retrieve_obj_list]
 
     def close(self):
