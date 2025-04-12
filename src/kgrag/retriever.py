@@ -45,17 +45,17 @@ class Retriever:
             u = path[-1]
 
             if not len(u.adj) and u.type == NodeTagType.TH:
-                path2text = ", ".join([re.sub(r'[\.|\?|!]', '', v.value) for v in path])
+                path2text = ", ".join([v.value for v in path])
                 path_data_list.append([path2text, u.data])
             else:
                 for v in u.adj:
                     stack.append(path + [v])
 
         for path, data in path_data_list:
-            path_tokens = self.tokenizer(path, language="english")
-            if len(path_tokens) > 1:
-                raise NotImplementedError(f"Path with multiple tokens.\n\t Path: {path}")
-            path_embeddings = self.model.encode(path_tokens)
+            # path_tokens = self.tokenizer(path, language="english")
+            # if len(path_tokens) > 1:
+            #     raise NotImplementedError(f"Path with multiple tokens.\n\t Path: {path}")
+            path_embeddings = self.model.encode([path])
             self.store.write(path_embeddings, {"path": path, "data": data})
 
     def retrieve(self, query):

@@ -24,6 +24,7 @@ python3 src/main.py <filepath> [options]
 - `--storepath`: Folder path to read/write embedding and JSON store
 - `--operation`: Specifies the operation to perform on the store. Options: `r` (read), `w` (write, default)
 - `--metric`: Metric to use for evaluation. Options: `BERTScore` (default), `BLEURT`, `chrF`
+- `--threads`, `-th`: Number of threads to use (default: 1)
 
 ### Examples
 
@@ -35,5 +36,5 @@ python3 src/main.py data/nq_examples.jsonl --pipeline kg --agent google --num-li
 Run 250 questions using ChunkRAG with the BERTScore metric and reading from previously stored folder.
 
 ```bash
-python3 src/main.py data/filtered_table_short_answer.jsonl -p chunk -n 250 -t --key API_KEY --storepath stores/chunk_250 --metric BERTScore --operation r
+python3 src/main.py data/filtered_table_short_answer.jsonl -p chunk -n 250 -t --key API_KEY --storepath stores/chunk_250 --metric BERTScore --operation r -th 4
 ```
