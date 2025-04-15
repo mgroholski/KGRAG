@@ -1,0 +1,10 @@
+# Ignore everything
+*
+
+# But NOT these:
+!.gitignore
+!src/
+!src/**
+!README.md
+!requirements.txt
+!setup.py
