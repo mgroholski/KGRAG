@@ -1,5 +1,8 @@
 from utils.store_utils import Store
 import numpy as np
+from rank_bm25 import BM25Okapi
+from nltk.tokenize import word_tokenize
+
 class Retriever:
     def __init__(self, embedding_dict, store_dict, agent, verbose=False):
         if "model" in embedding_dict and "tokenizer" in embedding_dict and "model_dim" in embedding_dict:
@@ -15,6 +18,15 @@ class Retriever:
             raise Exception("Could not read store dictionary information. Please format correctly.")
 
         self.agent = agent
+
+        # Set up BM25 only if metadata exists
+        self.all_chunks = self.store.metadata
+        if self.all_chunks:
+            self.bm25_corpus = [word_tokenize(chunk.lower()) for chunk in self.all_chunks]
+            self.bm25_model = BM25Okapi(self.bm25_corpus)
+        else:
+            self.bm25_corpus = []
+            self.bm25_model = None  # Delay initialization until retrieve()
 
     def embed(self, corpus):
         def cosine_similarity(vec1, vec2):
@@ -43,19 +55,55 @@ class Retriever:
         chunks.append(cur_chunk)
 
         for chunk in chunks:
-            chunk_embeddings = self.model.encode([chunk,])
+            chunk_embeddings = self.model.encode([chunk])
             self.store.write(chunk_embeddings, chunk)
 
-    def retrieve(self, query)->list[str]:
-        '''
-        Parameters:  query - Natural language question being utilized for retrieval.
-        Return: A list of strings of chunks to put into context.
-        '''
+    def retrieve(self, query) -> list[str]:
+        # Lazy BM25 init if not yet done
+        if self.bm25_model is None and self.store.metadata:
+            self.all_chunks = self.store.metadata
+            self.bm25_corpus = [word_tokenize(chunk.lower()) for chunk in self.all_chunks]
+            self.bm25_model = BM25Okapi(self.bm25_corpus)
 
-        #TODO: Implement hybrid retrieval and advanced filtering
+        # Dense retrieval (top 5)
         q_embedding = self.model.encode([query])
-        retrieve_obj_list = self.store.nn_query(q_embedding, 10)
-        return retrieve_obj_list
+        dense_results = self.store.nn_query(q_embedding, 5)
+
+        # Sparse retrieval (BM25, top 5)
+        sparse_results = []
+        if self.bm25_model:
+            sparse_scores = self.bm25_model.get_scores(word_tokenize(query.lower()))
+            sparse_ranked = sorted(zip(sparse_scores, self.all_chunks), reverse=True)[:5]
+            sparse_results = [chunk for _, chunk in sparse_ranked]
+
+        # Combine and deduplicate
+        combined = []
+        seen = set()
+        for chunk in dense_results + sparse_results:
+            if chunk not in seen:
+                combined.append(chunk)
+                seen.add(chunk)
+
+        # LLM-based relevance filtering
+        filtered_chunks = []
+        for chunk in combined:
+            prompt = f"""
+Query: {query}
+Chunk: {chunk}
+
+On a scale of 1 to 10, how relevant is this chunk to the query above?
+Only return a number from 1 to 10.
+"""
+            try:
+                response = self.agent.ask(prompt, max_length=10)
+                score = int(''.join(filter(str.isdigit, response)))
+                if score >= 6:
+                    filtered_chunks.append(chunk)
+            except Exception as e:
+                print(f"LLM scoring failed for a chunk: {e}")
+                continue
+
+        return filtered_chunks
 
     def close(self):
         self.store.close()
