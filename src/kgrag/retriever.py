@@ -1,7 +1,7 @@
 from kgrag import graph_utils
-from utils.store_utils import Store
+# from utils.store_utils import Store
+from utils.store_utils import StoreTree
 from visualizations.graph_visualizations import visualize_graph_topological, visualize_graph_with_cycle_detection
-import re
 from kgrag.graph_utils import NodeTagType
 
 class Retriever:
@@ -14,12 +14,14 @@ class Retriever:
             raise Exception("Could not read embedding dictionary information. Please format correctly.")
 
         if "storepath" in store_dict:
-            self.store = Store(self.model_dim, store_dict["storepath"], verbose)
+            self.store = StoreTree(self.model_dim, None, False)
+            # self.store = Store(self.model_dim, store_dict["storepath"], verbose)
         else:
             raise Exception("Could not read store dictionary information. Please format correctly.")
 
         self.visualize = verbose
         self.agent = agent
+
     def embed(self, corpus):
         '''
         1. Create knowledge graph from corpus
@@ -45,20 +47,21 @@ class Retriever:
             u = path[-1]
 
             if not len(u.adj) and u.type == NodeTagType.TH:
-                path2text = ", ".join([v.value for v in path])
-                path_data_list.append([path2text, u.data])
+                # path2text = ", ".join([v.value for v in path])
+                path_data_list.append([path, u.data])
             else:
                 for v in u.adj:
                     stack.append(path + [v])
 
-        for path, data in path_data_list:
-            # path_tokens = self.tokenizer(path, language="english")
-            # if len(path_tokens) > 1:
-            #     raise NotImplementedError(f"Path with multiple tokens.\n\t Path: {path}")
-            path_embeddings = self.model.encode([path])
-            self.store.write(path_embeddings, {"path": path, "data": data})
+        for path, _ in path_data_list:
+            metadata = [{"title": u.value, "data": None if not len(u.data) else u.data} for u in path]
+            title_embeddings = self.model.encode([a["title"] for a in metadata])
+            self.store.write(title_embeddings, metadata)
 
     def retrieve(self, query):
+        '''
+            Create a layered vector store like a Trie. Compare each layer within the to the query.
+        '''
         # q_tokens = self.tokenizer(query, language="english")
         q_embeddings = self.model.encode([query])
         retrieve_obj_list = self.store.nn_query(q_embeddings, 10)

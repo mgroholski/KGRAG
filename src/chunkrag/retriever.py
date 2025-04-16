@@ -1,7 +1,7 @@
 from utils.store_utils import Store
 import numpy as np
 class Retriever:
-    def __init__(self, embedding_dict, store_dict, agent, verbose=False):
+    def __init__(self, embedding_dict, store_dict, agent, operation="w", verbose=False):
         if "model" in embedding_dict and "tokenizer" in embedding_dict and "model_dim" in embedding_dict:
             self.model = embedding_dict["model"]
             self.tokenizer = embedding_dict["tokenizer"]
