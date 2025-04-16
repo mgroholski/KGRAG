@@ -29,6 +29,20 @@ class StoreNode:
             res.append((dist, node))
         return res
 
+    def __lt__(self, other):
+        """Less than comparison, primarily used for heap operations"""
+        if not isinstance(other, StoreNode):
+            return NotImplemented
+        # Compare by text_value if needed
+        return self.text_value < other.text_value
+
+    def __eq__(self, other):
+        """Equality comparison"""
+        if not isinstance(other, StoreNode):
+            return NotImplemented
+        # Two nodes are equal if they have the same text_value and data
+        return self.text_value == other.text_value and self.data == other.data
+
     @staticmethod
     def get_avg_embedding(q_embeddings):
         return np.mean(q_embeddings, axis=0, keepdims=True)
@@ -89,10 +103,13 @@ class StoreTree:
                 To use range_query, we'd need to answer "Is there some threshold such that we don't care about answers below?"
         '''
         # Track current avg IP, node, natural language list, list of IPs
-        max_heap = [(0.0, self.root, "", [])]
-        leaf_list = []
-        while max_heap:
-            avg_ip, u, nl_path, ip_list = heapq.heappop(max_heap)
+        max_heap = [(0.0, "", self.root, [])]
+        return_list = []
+
+        gamma = 0.8
+        scoring_function = lambda a : (-(sum([((gamma ** (len(new_score_list) - 1 - idx)) * i) for idx, i in enumerate(new_score_list)]) / sum([(gamma ** (len(new_score_list) - 1 - idx)) for idx in range(len(new_score_list))])))
+        while max_heap and len(return_list) < k:
+            avg_ip, nl_path, u, ip_list = heapq.heappop(max_heap)
             if len(u.text_value) > 0:
                 if len(nl_path):
                     nl_path += ", "
@@ -102,13 +119,19 @@ class StoreTree:
                 child_vals = u.search_children(q_embeddings)
                 for dist, node in child_vals:
                     new_score_list = ip_list + [dist]
-                    heapq.heappush(max_heap, (-(sum(new_score_list) / len(new_score_list)), node, nl_path, new_score_list))
-            elif u.data != None:
-                heapq.heappush(leaf_list, (avg_ip, {"path": nl_path, "data": u.data}))
+                    try:
+                        heapq.heappush(max_heap, (scoring_function(new_score_list), nl_path, node, new_score_list))
+                    except Exception as e:
+                        print("Heap: ", max_heap)
+                        print("Bad Search: ", (scoring_function(new_score_list), nl_path, node, new_score_list))
+                        raise e
 
-        return_list = []
-        while len(return_list) < k and len(leaf_list):
-            return_list.append(heapq.heappop(leaf_list))
+            elif u.data != None:
+                return_list.append((-avg_ip, {"path": nl_path, "data": u.data}))
+
+        print("Retrieve List: ")
+        for (score,path) in return_list:
+            print(f"\t Score: {score}\n\t Path:{path}")
 
         return [path_obj for (_, path_obj) in return_list]
 
@@ -116,7 +139,7 @@ class StoreTree:
         raise NotImplementedError()
 
     def close(self):
-        if self.path != None:
+        if self.folder_path != None:
             raise NotImplementedError("Implement writing StoreTrees files.")
 
     def __exit__(self, exc_type, exc_val, exc_tb):

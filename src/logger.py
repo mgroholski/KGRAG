@@ -9,7 +9,6 @@ class Logger:
 
     def log(self, msg):
         self.write_file.write(msg + "\n")
-        pass
 
     def close(self):
         print("Closing output file...")
