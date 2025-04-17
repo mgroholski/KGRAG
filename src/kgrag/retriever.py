@@ -46,7 +46,7 @@ class Retriever:
             path = stack.pop()
             u = path[-1]
 
-            if not len(u.adj) and u.type == NodeTagType.TH:
+            if not len(u.adj) and (u.type == NodeTagType.TH or u.type == NodeTagType.ARRAY_TABLE):
                 # path2text = ", ".join([v.value for v in path])
                 path_data_list.append([path, u.data])
             else:
@@ -64,7 +64,7 @@ class Retriever:
         '''
         # q_tokens = self.tokenizer(query, language="english")
         q_embeddings = self.model.encode([query])
-        retrieve_obj_list = self.store.nn_query(q_embeddings, 10)
+        retrieve_obj_list = self.store.nn_query(q_embeddings, 3)
         return [(obj["path"], obj["data"]) for obj in retrieve_obj_list]
 
     def close(self):
