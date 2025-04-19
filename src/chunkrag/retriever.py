@@ -13,11 +13,13 @@ class Retriever:
             raise Exception("Could not read embedding dictionary information. Please format correctly.")
 
         if "storepath" in store_dict:
-            self.store = Store(self.model_dim, store_dict["storepath"], verbose)
+            self.operation = store_dict["operation"]
+            self.store = Store(self.model_dim, store_dict["storepath"], self.operation,verbose)
         else:
             raise Exception("Could not read store dictionary information. Please format correctly.")
 
         self.agent = agent
+        self.verbose = verbose
 
         # Set up BM25 only if metadata exists
         self.all_chunks = self.store.metadata
@@ -29,6 +31,8 @@ class Retriever:
             self.bm25_model = None  # Delay initialization until retrieve()
 
     def embed(self, corpus):
+        if self.operation == "r":
+            return
         def cosine_similarity(vec1, vec2):
             dot_product = np.dot(vec1, vec2)
             norm1 = np.linalg.norm(vec1)
@@ -106,7 +110,8 @@ Only return a number from 1 to 10.
         return filtered_chunks
 
     def close(self):
-        self.store.close()
+        if self.operation != "r":
+            self.store.close()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()

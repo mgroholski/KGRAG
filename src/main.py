@@ -53,7 +53,6 @@ def get_responses(idx, logger, question, ground_truth_retrieve):
     return (retrieval_answer, nq_answer)
 
 
-
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Embeds the table data and allows for path retrieval.")
     parser.add_argument('filepath')
@@ -92,7 +91,8 @@ if __name__=="__main__":
     }
 
     store_info= {
-        "storepath": args.storepath
+        "storepath": args.storepath,
+        "operation": args.operation
     }
 
     retriever = None
@@ -143,9 +143,9 @@ if __name__=="__main__":
                                 line_long_answer_text = "".join(text_utils.get_nq_tokens(simple_nq)[start_token_idx : end_token_idx])
                                 qa_list.append((line_question,line_long_answer_text))
                                 break
-                    line_document = simple_nq["document_text"]
+                    line_document = line_json["document_html"]
                     if args.operation == "w":
-                        future = executor.submit(retriever.embed,line_document)
+                        future = executor.submit(retriever.embed, line_document)
                         embed_futures.append(future)
                 else:
                     break
