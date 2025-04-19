@@ -1,7 +1,7 @@
 from utils.store_utils import Store
 import numpy as np
 class Retriever:
-    def __init__(self, embedding_dict, store_dict, agent, operation="w", verbose=False):
+    def __init__(self, embedding_dict, store_dict, agent, verbose=False):
         if "model" in embedding_dict and "tokenizer" in embedding_dict and "model_dim" in embedding_dict:
             self.model = embedding_dict["model"]
             self.tokenizer = embedding_dict["tokenizer"]
@@ -10,13 +10,17 @@ class Retriever:
             raise Exception("Could not read embedding dictionary information. Please format correctly.")
 
         if "storepath" in store_dict:
-            self.store = Store(self.model_dim, store_dict["storepath"], verbose)
+            self.operation = store_dict["operation"]
+            self.store = Store(self.model_dim, store_dict["storepath"], self.operation,verbose)
         else:
             raise Exception("Could not read store dictionary information. Please format correctly.")
 
         self.agent = agent
+        self.verbose = verbose
 
     def embed(self, corpus):
+        if self.operation == "r":
+            return
         def cosine_similarity(vec1, vec2):
             dot_product = np.dot(vec1, vec2)
             norm1 = np.linalg.norm(vec1)
@@ -58,7 +62,8 @@ class Retriever:
         return retrieve_obj_list
 
     def close(self):
-        self.store.close()
+        if self.operation != "r":
+            self.store.close()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()

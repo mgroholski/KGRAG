@@ -53,7 +53,7 @@ class StoreNode:
         return v if norm == 0 else v / norm
 
 class StoreTree:
-    def __init__(self, dim, path=None, verbose=False):
+    def __init__(self, dim, path=None, read=False, verbose=False):
         '''
             Needs to store a list of page titles to begin the search.
             Root should not be included: "" (Root Node) -> Ringo Starr -> Songs
@@ -61,12 +61,45 @@ class StoreTree:
 
         self.folder_path = path
         self.verbose = verbose
-        if (path != None):
-            raise NotImplementedError("Implement reading in embeddings files.")
-
         self.embedding_dim = dim
-        self.root = StoreNode(dim)
         self.write_lock = threading.Lock()
+
+        if (read == "r" and self.folder_path is not None and os.path.exists(path)
+            and os.path.exists(os.path.join(path, "tree_metadata.json"))):
+            print(f"Loading StoreTree from {path}...")
+
+            metadata_path = os.path.join(path, "tree_metadata.json")
+            with open(metadata_path, "r") as read_file:
+                tree_data = json.load(read_file)
+
+            if tree_data["embedding_dim"] != dim:
+                print(f"Warning: Stored embedding dimension ({tree_data['embedding_dim']}) differs from requested ({dim})")
+
+            nodes_dict = {}
+            for node_data in tree_data["nodes"]:
+                node_id = node_data["id"]
+                text_value = node_data["text_value"]
+                data = node_data["data"]
+                new_node = StoreNode(dim, text_value, data)
+                node_index_path = os.path.join(path, f"node_{node_id}.index")
+                if os.path.exists(node_index_path):
+                    new_node.index = faiss.read_index(node_index_path)
+                nodes_dict[node_id] = new_node
+
+            for node_data in tree_data["nodes"]:
+                node_id = node_data["id"]
+                node = nodes_dict[node_id]
+                for child_info in node_data["children"]:
+                    child_id = child_info["id"]
+                    title = child_info["title"]
+                    child_node = nodes_dict[child_id]
+                    node.adj.append(child_node)
+                    node.adj_dict[title] = child_node
+            self.root = nodes_dict["root"]
+            print("StoreTree loaded successfully")
+        else:
+            print("Creating new StoreTree...")
+            self.root = StoreNode(dim)
 
 
     def write(self, path_embeddings, path_metadata):
@@ -107,7 +140,13 @@ class StoreTree:
         return_list = []
 
         gamma = 0.8
-        scoring_function = lambda a : (-(sum([((gamma ** (len(new_score_list) - 1 - idx)) * i) for idx, i in enumerate(new_score_list)]) / sum([(gamma ** (len(new_score_list) - 1 - idx)) for idx in range(len(new_score_list))])))
+        def scoring_function(score_list):
+            n = len(score_list)
+            weights = [gamma ** (n - 1 - i) for i in range(n)]
+            weighted_sum = sum(w * score for w, score in zip(weights, score_list))
+            sum_of_weights = sum(weights)
+            return -weighted_sum / sum_of_weights
+
         while max_heap and len(return_list) < k:
             avg_ip, nl_path, u, ip_list = heapq.heappop(max_heap)
             if len(u.text_value) > 0:
@@ -125,13 +164,8 @@ class StoreTree:
                         print("Heap: ", max_heap)
                         print("Bad Search: ", (scoring_function(new_score_list), nl_path, node, new_score_list))
                         raise e
-
             elif u.data != None:
                 return_list.append((-avg_ip, {"path": nl_path, "data": u.data}))
-
-        # print("Retrieve List: ")
-        # for (score,path) in return_list:
-        #     print(f"\t Score: {score}\n\t Path:{path}")
 
         return [path_obj for (_, path_obj) in return_list]
 
@@ -139,8 +173,44 @@ class StoreTree:
         raise NotImplementedError()
 
     def close(self):
-        if self.folder_path != None:
-            raise NotImplementedError("Implement writing StoreTrees files.")
+        if self.folder_path:
+            if not os.path.exists(self.folder_path):
+                os.makedirs(self.folder_path)
+
+            tree_data = {
+                "embedding_dim": self.embedding_dim,
+                "nodes": []
+            }
+
+            def traverse_tree(node, node_id, parent_id=None):
+                node_data = {
+                    "id": node_id,
+                    "parent_id": parent_id,
+                    "text_value": node.text_value,
+                    "data": node.data,
+                    "children": []
+                }
+
+                node_index_path = os.path.join(self.folder_path, f"node_{node_id}.index")
+                faiss.write_index(node.index, node_index_path)
+                for i, (title, child_node) in enumerate(node.adj_dict.items()):
+                    child_id = f"{node_id}_{i}"
+                    node_data["children"].append({
+                        "id": child_id,
+                        "title": title
+                    })
+                    traverse_tree(child_node, child_id, node_id)
+
+                tree_data["nodes"].append(node_data)
+
+            traverse_tree(self.root, "root")
+            metadata_path = os.path.join(self.folder_path, "tree_metadata.json")
+            with open(metadata_path, "w") as write_file:
+                json.dump(tree_data, write_file, indent=2)
+
+            print(f"Tree data saved to {self.folder_path}")
+        else:
+            print("No write path provided...")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()

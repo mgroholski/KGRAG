@@ -4,10 +4,10 @@ import os
 import numpy as np
 
 class Store:
-    def __init__(self, dim, path=None, verbose=False):
+    def __init__(self, dim, path=None, read=False, verbose=False):
         self.folder_path = path
         self.verbose = verbose
-        if (path != None and os.path.exists(path)
+        if (read == "r" and path != None and os.path.exists(path)
         and os.path.exists(os.path.join(path, "embeddings.index"))
         and os.path.exists(os.path.join(path, "metadata.json"))):
             print("Loading from the provided path...")

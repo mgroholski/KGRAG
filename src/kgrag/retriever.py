@@ -14,8 +14,8 @@ class Retriever:
             raise Exception("Could not read embedding dictionary information. Please format correctly.")
 
         if "storepath" in store_dict:
-            self.store = StoreTree(self.model_dim, None, False)
-            # self.store = Store(self.model_dim, store_dict["storepath"], verbose)
+            self.operation = store_dict["operation"]
+            self.store = StoreTree(self.model_dim, store_dict["storepath"], self.operation, verbose)
         else:
             raise Exception("Could not read store dictionary information. Please format correctly.")
 
@@ -23,6 +23,8 @@ class Retriever:
         self.agent = agent
 
     def embed(self, corpus):
+        if self.operation == "r":
+            return
         '''
         1. Create knowledge graph from corpus
         2. For each root to leaf path create an embedding and store the data.
@@ -47,7 +49,6 @@ class Retriever:
             u = path[-1]
 
             if not len(u.adj) and (u.type == NodeTagType.TH or u.type == NodeTagType.ARRAY_TABLE):
-                # path2text = ", ".join([v.value for v in path])
                 path_data_list.append([path, u.data])
             else:
                 for v in u.adj:
@@ -62,13 +63,13 @@ class Retriever:
         '''
             Create a layered vector store like a Trie. Compare each layer within the to the query.
         '''
-        # q_tokens = self.tokenizer(query, language="english")
         q_embeddings = self.model.encode([query])
         retrieve_obj_list = self.store.nn_query(q_embeddings, 3)
         return [(obj["path"], obj["data"]) for obj in retrieve_obj_list]
 
     def close(self):
-        self.store.close()
+        if self.operation != "r":
+            self.store.close()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
