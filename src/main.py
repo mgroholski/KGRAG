@@ -1,5 +1,6 @@
 import argparse, os, nltk
 from sentence_transformers.SentenceTransformer import SentenceTransformer
+from agents.llama_agent import LlamaAgent
 from kgrag.retriever import Retriever as kg_retriever
 from chunkrag.retriever import Retriever as chunk_retriever
 from nltk.tokenize import sent_tokenize
@@ -74,13 +75,11 @@ if __name__=="__main__":
     logger = Logger(f"./output/{args.pipeline}_{args.metric}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}.log")
 
     key = args.key
-    print(key)
-    exit()
     agent = None
     if args.agent == "google":
         agent = GoogleAgent(key)
     elif args.agent == "llama":
-        raise NotImplementedError()
+        agent = LlamaAgent()
     else:
         raise NotImplementedError(f"Could not initialize LLM agent for {args.agent}.")
 
