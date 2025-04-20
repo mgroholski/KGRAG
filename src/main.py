@@ -11,8 +11,12 @@ from agents.google_agent import GoogleAgent
 from stats import BERTScore, CHRF, BLEURT
 import concurrent.futures
 
+def get_responses(idx, objects, question, ground_truth_retrieve):
+    logger = objects['logger']
+    agent = objects['agent']
+    pipeline = objects['pipeline']
 
-def get_responses(idx, logger, question, ground_truth_retrieve):
+
     # Generate ground truth.
     nq_query = f"""Use only the context to answer the query.
     CONTEXT:
@@ -25,18 +29,23 @@ def get_responses(idx, logger, question, ground_truth_retrieve):
     nq_answer = agent.ask(nq_query, max_length = 500)
 
     # Generate retrieval answer.
-    retrieve_list = retriever.retrieve(question)
-    retrieval_query = "Use only the context to answer the query. "
-    if args.pipeline == "kg":
+    retrieval_query = ""
+    retrieve_list = []
+    if pipeline != None:
+        retrieve_list = retriever.retrieve(question)
+        retrieval_query = "Use only the context to answer the query. "
+
+    if pipeline == "kg":
         retrieval_query += "We will provide data as context with an associated path of headings that lead to where to the data is located.\n"
-    retrieval_query += """
-    CONTEXT:\n"""
-    if args.pipeline == "kg":
-        for path, data in retrieve_list:
-            retrieval_query += f"PATH: {path}. DATA: {data}\n"
-    else:
-        for item in retrieve_list:
-            retrieval_query += item + "\n"
+    if pipeline != None:
+        retrieval_query += """
+        CONTEXT:\n"""
+        if args.pipeline == "kg":
+            for path, data in retrieve_list:
+                retrieval_query += f"PATH: {path}. DATA: {data}\n"
+        else:
+            for item in retrieve_list:
+                retrieval_query += item + "\n"
     retrieval_query += f"""
     QUERY:
         {question}
@@ -109,6 +118,8 @@ if __name__=="__main__":
         logger.log("Initializing the VanillaRAG pipeline...")
         # TODO: Add vanilla rag
         raise NotImplementedError()
+    elif args.pipeline == "none":
+        args.pipeline = None
     else:
         raise Exception("Invlaid pipeline name.")
 
@@ -117,7 +128,6 @@ if __name__=="__main__":
 
 
     logger.log("Reading dataset and creating embeddings...")
-
 
     qa_list = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
@@ -169,11 +179,18 @@ if __name__=="__main__":
         else:
             raise NotImplementedError()
 
+        objects = {
+            'logger': logger,
+            'agent': agent,
+            'pipeline': args.pipeline,
+            'metric': metric
+        }
+
         responses = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
             retrieve_futures = []
             for idx,(question, ground_truth_retrieve) in enumerate(qa_list):
-                future = executor.submit(get_responses, idx, logger, question, ground_truth_retrieve)
+                future = executor.submit(get_responses, idx, objects, question, ground_truth_retrieve)
                 retrieve_futures.append(future)
 
             for future in retrieve_futures:
