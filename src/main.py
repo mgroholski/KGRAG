@@ -74,8 +74,6 @@ if __name__=="__main__":
     logger = Logger(f"./output/{args.pipeline}_{args.metric}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}.log")
 
     key = args.key
-    print(key)
-    exit()
     agent = None
     if args.agent == "google":
         agent = GoogleAgent(key)
