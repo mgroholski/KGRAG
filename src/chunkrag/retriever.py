@@ -92,12 +92,12 @@ class Retriever:
         filtered_chunks = []
         for chunk in combined:
             prompt = f"""
-Query: {query}
-Chunk: {chunk}
+            Query: {query}
+            Chunk: {chunk}
 
-On a scale of 1 to 10, how relevant is this chunk to the query above?
-Only return a number from 1 to 10.
-"""
+            On a scale of 1 to 10, how relevant is this chunk to the query above?
+            Only return a number from 1 to 10.
+            """
             try:
                 response = self.agent.ask(prompt, max_length=10)
                 score = int(''.join(filter(str.isdigit, response)))
