@@ -45,7 +45,7 @@ def main():
     write_operations = 0
     with open(args.filepath, "r") as file, \
          open(os.path.expanduser(f"{args.write_filepath}"), "w") as write_file:
-
+        parsed_line = 0
         # Create a pool of workers
         with mp.Pool(processes=args.num_workers) as pool:
             # Process lines in parallel with progress bar
@@ -57,12 +57,14 @@ def main():
 
             # Write results to output file
             for result in results:
+                parsed_line += 1
+                if not parsed_line % 1000:
+                    print(f"Parsed {parsed_line} lines.")
                 if result is not None:
                     write_operations += 1
                     write_file.write(result)
 
     print("Write Operations: ", write_operations)
     print("Lines: ", total_lines)
-
 if __name__ == "__main__":
     main()
