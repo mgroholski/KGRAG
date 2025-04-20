@@ -67,7 +67,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Embeds the table data and allows for path retrieval.")
     parser.add_argument('filepath')
     parser.add_argument('--pipeline','-p', default="none", choices=["kg","chunk","vanilla","none"], help="The pipeline to run on.")
-    parser.add_argument('--agent', '-a', default="llama", choices=["google"], help="Specifies which agent to use to test.")
+    parser.add_argument('--agent', '-a', default="llama", choices=["google", "llama"], help="Specifies which agent to use to test.")
     parser.add_argument('--verbose', '-v', action='store_true', help="Verbose. Enables graph visualizations and prints distances rankings.")
     parser.add_argument('--num-lines', '-n', type=int, default=None, help="Number of elements to load from the input file (default: All lines).")
     parser.add_argument('--test', '-t', action='store_true', help="Enables QA test mode. Runs the selected pipeline against the ground truth.")
