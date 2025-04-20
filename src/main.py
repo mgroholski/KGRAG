@@ -16,7 +16,6 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     agent = objects['agent']
     pipeline = objects['pipeline']
 
-
     # Generate ground truth.
     nq_query = f"""Use only the context to answer the query.
     CONTEXT:
@@ -26,7 +25,9 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         {question}
     """
 
+    print("Before nq_answer")
     nq_answer = agent.ask(nq_query, max_length = 500)
+    print("After nq_answer")
 
     # Generate retrieval answer.
     retrieval_query = ""
@@ -34,10 +35,9 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     if pipeline != None:
         retrieve_list = retriever.retrieve(question)
         retrieval_query = "Use only the context to answer the query. "
+        if pipeline == "kg":
+            retrieval_query += "We will provide data as context with an associated path of headings that lead to where to the data is located.\n"
 
-    if pipeline == "kg":
-        retrieval_query += "We will provide data as context with an associated path of headings that lead to where to the data is located.\n"
-    if pipeline != None:
         retrieval_query += """
         CONTEXT:\n"""
         if args.pipeline == "kg":
@@ -46,12 +46,15 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         else:
             for item in retrieve_list:
                 retrieval_query += item + "\n"
+
     retrieval_query += f"""
     QUERY:
         {question}
     """
 
+    print("Before retrieval_answer")
     retrieval_answer = agent.ask(retrieval_query, max_length = 500)
+    print("After retrieval_answer")
 
     # Logs the response of the query.
     logger.log(f"Question {idx + 1}")
@@ -193,6 +196,7 @@ if __name__=="__main__":
                 future = executor.submit(get_responses, idx, objects, question, ground_truth_retrieve)
                 retrieve_futures.append(future)
 
+            cnt = 0
             for future in retrieve_futures:
                 result = future.result()
                 responses.append(result)

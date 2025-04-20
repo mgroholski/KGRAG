@@ -30,10 +30,10 @@ class LlamaAgent:
             device_map="auto"
         )
 
-    def ask(self, query, max_length=None):
+    def ask(self, query, max_new_length=None):
         # Set default max length if not provided
-        if max_length is None:
-            max_length = 2048
+        if max_new_length is None:
+            max_new_length = 2048
 
         # Tokenize input
         inputs = self.tokenizer(query, return_tensors="pt").to(self.model.device)
@@ -43,7 +43,7 @@ class LlamaAgent:
             output = self.model.generate(
                 inputs["input_ids"],
                 attention_mask=inputs["attention_mask"],
-                max_length=max_length,
+                max_new_tokens=max_new_length,
                 do_sample=True,
                 temperature=0.7,
                 top_p=0.9,
