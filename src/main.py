@@ -25,9 +25,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         {question}
     """
 
-    print("Before nq_answer")
     nq_answer = agent.ask(nq_query, max_length = 500)
-    print("After nq_answer")
 
     # Generate retrieval answer.
     retrieval_query = ""
@@ -52,9 +50,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         {question}
     """
 
-    print("Before retrieval_answer")
     retrieval_answer = agent.ask(retrieval_query, max_length = 500)
-    print("After retrieval_answer")
 
     # Logs the response of the query.
     logger.log(f"Question {idx + 1}")
@@ -196,7 +192,6 @@ if __name__=="__main__":
                 future = executor.submit(get_responses, idx, objects, question, ground_truth_retrieve)
                 retrieve_futures.append(future)
 
-            cnt = 0
             for future in retrieve_futures:
                 result = future.result()
                 responses.append(result)

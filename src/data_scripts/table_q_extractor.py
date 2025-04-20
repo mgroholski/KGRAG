@@ -4,12 +4,12 @@ import os
 import multiprocessing as mp
 from functools import partial
 from tqdm import tqdm
+from utils import text_utils
 
 # Data Download Link: https://ai.google.com/research/NaturalQuestions/download
 
 def process_line(line):
     """Process a single line and return it if it contains a table, None otherwise."""
-    from utils import text_utils
     try:
         line_json = json.loads(line)
         simple_nq = text_utils.simplify_nq_example(line_json)
