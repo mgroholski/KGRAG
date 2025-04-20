@@ -4,12 +4,12 @@ import os
 import multiprocessing as mp
 from functools import partial
 from tqdm import tqdm
-from utils import text_utils
 
 # Data Download Link: https://ai.google.com/research/NaturalQuestions/download
 
-def process_line(line, text_utils):
+def process_line(line):
     """Process a single line and return it if it contains a table, None otherwise."""
+    from utils import text_utils
     try:
         line_json = json.loads(line)
         simple_nq = text_utils.simplify_nq_example(line_json)
@@ -40,26 +40,19 @@ def main():
     total_lines = sum(1 for _ in open(args.filepath, 'r'))
 
     # Create a partial function with text_utils already provided
-    process_func = partial(process_line, text_utils=text_utils)
+    process_func = partial(process_line)
 
     write_operations = 0
     with open(args.filepath, "r") as file, \
          open(os.path.expanduser(f"{args.write_filepath}"), "w") as write_file:
-        parsed_line = 0
-        # Create a pool of workers
         with mp.Pool(processes=args.num_workers) as pool:
-            # Process lines in parallel with progress bar
             results = list(tqdm(
                 pool.imap(process_func, file, chunksize=args.chunk_size),
                 total=total_lines,
                 desc="Processing lines"
             ))
 
-            # Write results to output file
             for result in results:
-                parsed_line += 1
-                if not parsed_line % 1000:
-                    print(f"Parsed {parsed_line} lines.")
                 if result is not None:
                     write_operations += 1
                     write_file.write(result)
