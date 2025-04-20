@@ -56,8 +56,8 @@ def get_responses(idx, logger, question, ground_truth_retrieve):
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Embeds the table data and allows for path retrieval.")
     parser.add_argument('filepath')
-    parser.add_argument('--pipeline','-p', default="kg", choices=["kg","chunk","vanilla"], help="The pipeline to run on.")
-    parser.add_argument('--agent', '-a', default="google", choices=["google"], help="Specifies which agent to use to test.")
+    parser.add_argument('--pipeline','-p', default="none", choices=["kg","chunk","vanilla","none"], help="The pipeline to run on.")
+    parser.add_argument('--agent', '-a', default="llama", choices=["google"], help="Specifies which agent to use to test.")
     parser.add_argument('--verbose', '-v', action='store_true', help="Verbose. Enables graph visualizations and prints distances rankings.")
     parser.add_argument('--num-lines', '-n', type=int, default=None, help="Number of elements to load from the input file (default: All lines).")
     parser.add_argument('--test', '-t', action='store_true', help="Enables QA test mode. Runs the selected pipeline against the ground truth.")
@@ -74,9 +74,13 @@ if __name__=="__main__":
     logger = Logger(f"./output/{args.pipeline}_{args.metric}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}.log")
 
     key = args.key
+    print(key)
+    exit()
     agent = None
     if args.agent == "google":
         agent = GoogleAgent(key)
+    elif args.agent == "llama":
+        raise NotImplementedError()
     else:
         raise NotImplementedError(f"Could not initialize LLM agent for {args.agent}.")
 

@@ -2,6 +2,9 @@ import google.generativeai as genai
 
 class GoogleAgent:
     def __init__(self, apikey):
+        if not apikey:
+            raise Exception("Cannot intialize Google agent without API key.")
+
         self.ky = apikey
         genai.configure(api_key=self.ky)
         self.model = genai.GenerativeModel('models/gemini-2.0-flash')
