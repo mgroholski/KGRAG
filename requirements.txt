@@ -51,7 +51,7 @@ nltk==3.8.1
 numpy==1.26.3
 opt_einsum==3.4.0
 optree==0.15.0
-packaging @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_a6_qk3qyg7/croot/packaging_1734472142254/work
+packaging==24.0
 pandas==2.2.3
 parso==0.8.4
 pillow==11.1.0
