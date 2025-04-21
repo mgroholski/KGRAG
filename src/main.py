@@ -138,9 +138,8 @@ if __name__=="__main__":
             for line in data_file:
                 if max_line_cnt is not None and line_cnt < max_line_cnt:
                     line_cnt += 1
-                    print(f"Parsing {line_cnt}.")
-                    # if not line_cnt % 100:
-                    #     logger.log(f"Parsing line {line_cnt}.")
+                    if not line_cnt % 100:
+                        logger.log(f"Parsing line {line_cnt}.")
 
                     line_json = json.loads(line)
                     simple_nq = text_utils.simplify_nq_example(line_json)
@@ -163,7 +162,8 @@ if __name__=="__main__":
                 else:
                     break
 
-            for future in embed_futures:
+            for idx, future in enumerate(embed_futures):
+                print(f"Finished {idx}.")
                 future.result()
 
     if args.test:
