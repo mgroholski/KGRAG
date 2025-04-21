@@ -30,7 +30,7 @@ def main():
     parser = argparse.ArgumentParser(description="Extracts tables from html.")
     parser.add_argument('filepath')
     parser.add_argument('write_filepath')
-    parser.add_argument('--num_workers', type=int, default=mp.cpu_count(),
+    parser.add_argument('--num_workers', type=int, default=1,
                         help='Number of worker processes to use')
     parser.add_argument('--chunk_size', type=int, default=100,
                         help='Chunk size for multiprocessing')

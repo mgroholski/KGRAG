@@ -138,8 +138,9 @@ if __name__=="__main__":
             for line in data_file:
                 if max_line_cnt is not None and line_cnt < max_line_cnt:
                     line_cnt += 1
-                    if not line_cnt % 100:
-                        logger.log(f"Parsing line {line_cnt}.")
+                    print(f"Parsing {line_cnt}.")
+                    # if not line_cnt % 100:
+                    #     logger.log(f"Parsing line {line_cnt}.")
 
                     line_json = json.loads(line)
                     simple_nq = text_utils.simplify_nq_example(line_json)
@@ -156,7 +157,7 @@ if __name__=="__main__":
                                 qa_list.append((line_question,line_long_answer_text))
                                 break
                     line_document = line_json["document_html"]
-                    if args.operation == "w":
+                    if args.operation == "w" and retriever:
                         future = executor.submit(retriever.embed, line_document)
                         embed_futures.append(future)
                 else:
