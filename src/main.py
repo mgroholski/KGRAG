@@ -126,7 +126,7 @@ if __name__=="__main__":
         raise Exception(f"Could not find filepath to datafile. Filepath: {args.filepath}")
 
 
-    logger.log("Reading dataset and creating embeddings...")
+    print(f"Reading dataset and creating embeddings with {args.threads} threads...")
 
     qa_list = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
@@ -139,7 +139,7 @@ if __name__=="__main__":
                 if max_line_cnt is not None and line_cnt < max_line_cnt:
                     line_cnt += 1
                     if not line_cnt % 100:
-                        logger.log(f"Parsing line {line_cnt}.")
+                        print(f"Parsing line {line_cnt}.")
 
                     line_json = json.loads(line)
                     simple_nq = text_utils.simplify_nq_example(line_json)
@@ -167,7 +167,7 @@ if __name__=="__main__":
                 future.result()
 
     if args.test:
-        logger.log("Beginning QA tests...")
+        print("Beginning QA tests...")
 
         metric = None
         if args.metric == "BERTScore":

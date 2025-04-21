@@ -9,21 +9,17 @@ class LlamaAgent:
         models_dir = "./models"
         model_path = os.path.join(models_dir, "Llama-2-3b-hf")
 
-        # Create models directory if it doesn't exist
         os.makedirs(models_dir, exist_ok=True)
-
-        # Download model if it doesn't exist
         if not os.path.exists(model_path):
             print(f"Downloading {model_id} to {model_path}...")
             hf_token = input("Please enter your HuggingFace token (or set HUGGINGFACE_TOKEN env var): ") or os.environ.get("HUGGINGFACE_TOKEN")
             if not hf_token:
                 raise ValueError("HuggingFace token is required to download LLaMA models")
-            # Login to HuggingFace
+
             login(token=hf_token)
             snapshot_download(repo_id=model_id, local_dir=model_path)
             print("Download complete.")
 
-        # Load model and tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.model = AutoModelForCausalLM.from_pretrained(
             model_path,
@@ -35,7 +31,6 @@ class LlamaAgent:
     def ask(self, query, max_length=None):
         if max_length is None:
             max_length = 2048
-
 
         inputs = self.tokenizer(query, return_tensors="pt").to(self.model.device)
         with torch.no_grad():
