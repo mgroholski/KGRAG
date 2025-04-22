@@ -3,6 +3,7 @@ from sentence_transformers.SentenceTransformer import SentenceTransformer
 from agents.llama_agent import LlamaAgent
 from kgrag.retriever import Retriever as kg_retriever
 from chunkrag.retriever import Retriever as chunk_retriever
+from vanillarag.retriever import VanillaRetriever as vanilla_retriever
 from nltk.tokenize import sent_tokenize
 from logger import Logger
 from utils import text_utils
@@ -115,8 +116,7 @@ if __name__=="__main__":
         retriever = chunk_retriever(embedding_info, store_info, agent, args.verbose)
     elif args.pipeline == 'vanilla':
         print("Initializing the VanillaRAG pipeline...")
-        # TODO: Add vanilla rag
-        raise NotImplementedError()
+        retriever = vanilla_retriever(embedding_info, store_info, agent, args.verbose)
     elif args.pipeline == "none":
         args.pipeline = None
     else:
