@@ -4,10 +4,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from huggingface_hub import snapshot_download, login
 class LlamaAgent:
     def __init__(self):
-        # TODO: Choose a new verison of LLama and get it to work.
-        model_id = "meta-llama/Llama-2-3b-hf"
+        model_id = "meta-llama/Meta-Llama-3-8B"
         models_dir = "./models"
-        model_path = os.path.join(models_dir, "Llama-2-3b-hf")
+        model_path = os.path.join(models_dir, "Meta-Llama-3-8B")
 
         os.makedirs(models_dir, exist_ok=True)
         if not os.path.exists(model_path):
@@ -30,7 +29,7 @@ class LlamaAgent:
 
     def ask(self, query, max_length=None):
         if max_length is None:
-            max_length = 2048
+            max_length = 512
 
         inputs = self.tokenizer(query, return_tensors="pt").to(self.model.device)
         with torch.no_grad():
@@ -43,6 +42,5 @@ class LlamaAgent:
                 top_p=0.9,
                 pad_token_id=self.tokenizer.eos_token_id
             )
-
         response = self.tokenizer.decode(output[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
         return response

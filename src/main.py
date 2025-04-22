@@ -50,7 +50,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         {question}
     """
 
-    retrieval_answer = agent.ask(retrieval_query, max_length = 500)
+    retrieval_answer = agent.ask(retrieval_query, max_length = 512)
 
     # Logs the response of the query.
     logger.log(f"Question {idx + 1}")
