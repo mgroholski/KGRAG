@@ -108,13 +108,13 @@ if __name__=="__main__":
 
     retriever = None
     if args.pipeline == 'kg':
-        logger.log("Initializing the KG-RAG pipeline...")
+        print("Initializing the KG-RAG pipeline...")
         retriever = kg_retriever(embedding_info, store_info, agent, args.verbose)
     elif args.pipeline == 'chunk':
-        logger.log("Initializing the ChunkRAG pipeline...")
+        print("Initializing the ChunkRAG pipeline...")
         retriever = chunk_retriever(embedding_info, store_info, agent, args.verbose)
     elif args.pipeline == 'vanilla':
-        logger.log("Initializing the VanillaRAG pipeline...")
+        print("Initializing the VanillaRAG pipeline...")
         # TODO: Add vanilla rag
         raise NotImplementedError()
     elif args.pipeline == "none":
@@ -203,7 +203,7 @@ if __name__=="__main__":
         print("Making graphs...")
         metric.plt(f"./output/{args.metric}/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}")
     else:
-        logger.log("Beginning user QA retrieval...")
+        print("Beginning user QA retrieval...")
         while True:
             query = input("Query (Type 'exit' to exit): ")
             if query == "exit":
