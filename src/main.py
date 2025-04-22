@@ -214,4 +214,5 @@ if __name__=="__main__":
                 print(f"Rank {idx}:\n\t Data: {item}")
 
     logger.close()
-    retriever.close()
+    if retriever != None:
+        retriever.close()
