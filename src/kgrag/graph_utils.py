@@ -87,7 +87,7 @@ def _extract_table_graph(soup, root=None):
 
         row_elements = row.find_all(["th", "td"])
         for element in row_elements:
-            if element.name == "th" and element.get("colspan") and int(element.get("colspan")) > 1:
+            if element.name == "th" and element.get("colspan") and int(re.sub(r'[^0-9]', '', element.get("colspan"))) > 1:
                 element.name = "th_colspan"
         if len(row_elements) == 1:
             element = row_elements[0]
