@@ -74,7 +74,7 @@ if __name__=="__main__":
     parser.add_argument('--key', type=str, help="API Key for LLM agent.")
     parser.add_argument("--storepath", type=str, default=None, help="The folder path of that contains the embedding and JSON store to read/write to.")
     parser.add_argument("--operation", default="w", choices=["r", "w"], help="Specifies the operation to perform on the store. Options: r (read), w (write).")
-    parser.add_argument('--metric', default="BERTScore", choices=["BERTScore", "BLEURT", "chrF"], help="Specifies the metric to use for evaluation. Options: BERTScore, BLEURT, and chrF.")
+    parser.add_argument('--metric', default="BERTScore", choices=["BERTScore", "BLEURT", "chrF", "all"], help="Specifies the metric to use for evaluation. Options: BERTScore, BLEURT, and chrF.")
     parser.add_argument('--threads', '-th', default=1, type=int, help="Number of threads to use.")
     args = parser.parse_args()
 
@@ -165,25 +165,25 @@ if __name__=="__main__":
             for idx, future in enumerate(embed_futures):
                 print(f"Finished {idx}.")
                 future.result()
-
     if args.test:
         print("Beginning QA tests...")
 
-        metric = None
-        if args.metric == "BERTScore":
-            metric = BERTScore.BERTScore(logger)
-        elif args.metric == "BLEURT":
-            metric = BLEURT.BLEURT(logger)
-        elif args.metric == "chrF":
-            metric = CHRF.chrF(logger)
-        else:
+        metrics = []
+        if args.metric == "BERTScore" or args.metric == "all":
+            metrics.append(("BERTScore", BERTScore.BERTScore(logger)))
+        if args.metric == "BLEURT" or args.metric == "all":
+            metrics.append(("BLEURT", BLEURT.BLEURT(logger)))
+        if args.metric == "chrF" or args.metric == "all":
+            metrics.append(("chrF", CHRF.chrF(logger)))
+
+        if not len(metrics):
             raise NotImplementedError()
 
         objects = {
             'logger': logger,
             'agent': agent,
             'pipeline': args.pipeline,
-            'metric': metric
+            'metrics': metrics
         }
 
         responses = []
@@ -200,9 +200,10 @@ if __name__=="__main__":
 
         # Computes stats about the answers.
         candidates, truths = zip(*responses)
-        metric.score(candidates, truths)
-        print("Making graphs...")
-        metric.plt(f"./output/{args.metric}/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}")
+        for metric_n, metric in metrics:
+            metric.score(candidates, truths)
+            print("Making graphs...")
+            metric.plt(f"./output/{metric_n}/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}")
     else:
         print("Beginning user QA retrieval...")
         while True:
