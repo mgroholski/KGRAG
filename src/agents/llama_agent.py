@@ -1,6 +1,6 @@
 import os
-import tensorflow as tf
-from transformers import TFAutoModelForCausalLM, AutoTokenizer
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from huggingface_hub import snapshot_download, login
 class LlamaAgent:
     def __init__(self):
@@ -22,25 +22,24 @@ class LlamaAgent:
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
 
         # Check for GPU availability
-        gpus = tf.config.list_physical_devices('GPU')
-        if gpus:
-            print(f"Using GPU: {gpus[0]}")
-            # Set memory growth to avoid allocating all GPU memory
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
+        if torch.cuda.is_available():
+            print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+            self.device = torch.device("cuda")
         else:
             print("GPU not available, using CPU")
+            self.device = torch.device("cpu")
 
-        self.model = TFAutoModelForCausalLM.from_pretrained(
+        self.model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            dtype=tf.float16
+            torch_dtype=torch.float16,
+            device_map="auto"
         )
 
     def ask(self, query, max_length=None):
         if max_length is None:
             max_length = 512
 
-        inputs = self.tokenizer(query, return_tensors="tf")
+        inputs = self.tokenizer(query, return_tensors="pt").to(self.device)
         output = self.model.generate(
             inputs["input_ids"],
             attention_mask=inputs["attention_mask"],
