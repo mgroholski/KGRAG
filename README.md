@@ -24,7 +24,6 @@ python3 src/main.py <filepath> [options]
 - `--storepath`: Folder path to read/write embedding and JSON store
 - `--operation`: Specifies the operation to perform on the store. Options: `r` (read), `w` (write, default)
 - `--metric`: Metric to use for evaluation. Options: `BERTScore` (default), `BLEURT`, `chrF`
-- `--threads`, `-th`: Number of threads to use (default: 1)
 
 ### Examples
 

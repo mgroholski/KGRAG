@@ -123,11 +123,7 @@ if __name__=="__main__":
         raise Exception(f"Could not find filepath to datafile. Filepath: {args.filepath}")
 
 
-    print(f"Reading dataset and creating embeddings with {args.threads} threads...")
-
     qa_list = []
-
-
     read_lines = []
     with open(args.filepath, "r") as data_file:
         # Assumes one example per line.
