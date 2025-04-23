@@ -138,7 +138,8 @@ if __name__=="__main__":
             else:
                 break
 
-    for line in read_lines:
+    for idx, line in enumerate(read_lines):
+        print(f"Processing line {idx+1}.")
         line_json = json.loads(line)
         simple_nq = text_utils.simplify_nq_example(line_json)
 
@@ -181,6 +182,7 @@ if __name__=="__main__":
 
         for idx,(question, ground_truth_retrieve) in enumerate(qa_list):
             responses.append(get_responses(idx, objects, question, ground_truth_retrieve))
+            print(f"Finished question {idx + 1}.")
 
         # Computes stats about the answers.
         candidates, truths = zip(*responses)
