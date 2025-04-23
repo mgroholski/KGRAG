@@ -1,12 +1,15 @@
 import json
 import faiss
+import torch
 import os
 import numpy as np
 
 class Store:
-    def __init__(self, dim, path=None, read=False, verbose=False):
+    def __init__(self, dim, path=None, read=False, verbose=False, use_gpu=True):
         self.folder_path = path
         self.verbose = verbose
+        self.use_gpu = use_gpu and torch.cuda.is_available()
+
         if (read == "r" and path != None and os.path.exists(path)
         and os.path.exists(os.path.join(path, "embeddings.index"))
         and os.path.exists(os.path.join(path, "metadata.json"))):
@@ -14,10 +17,15 @@ class Store:
             self.index = faiss.read_index(os.path.join(path, "embeddings.index"))
             with open(os.path.join(path, "metadata.json"), "r") as read_file:
                 self.metadata = json.loads(read_file.read())
+
         else:
             print("Either did not provide a path or could not find the correct files... Creating new store files.")
             self.index = faiss.IndexFlatIP(dim)
             self.metadata = []
+
+        # Move index to GPU if available and requested
+        if self.use_gpu:
+            self._move_index_to_gpu()
 
     def write(self, embedding, data):
         self.index.add(embedding)
@@ -69,8 +77,17 @@ class Store:
         if self.folder_path:
             if not os.path.exists(self.folder_path):
                 os.makedirs(self.folder_path)
+
+            # Convert GPU index back to CPU for storage if needed
+            index_to_save = self.index
+            if self.use_gpu:
+                if self.verbose:
+                    print("Moving index back to CPU for storage.")
+                index_to_save = faiss.index_gpu_to_cpu(self.index)
+
             faiss_path = os.path.join(self.folder_path, "embeddings.index")
-            faiss.write_index(self.index, faiss_path)
+            faiss.write_index(index_to_save, faiss_path)
+
             metadata_path = os.path.join(self.folder_path, "metadata.json")
             with open(metadata_path, "w") as write_file:
                 write_file.write(json.dumps(self.metadata))
@@ -84,3 +101,22 @@ class Store:
     def normalize_vector(v):
         norm = np.linalg.norm(v)
         return v if norm == 0 else v / norm
+
+    def _move_index_to_gpu(self):
+        """Move the FAISS index to GPU if available."""
+        try:
+            # Get number of available GPUs
+            ngpus = faiss.get_num_gpus()
+            if ngpus > 0:
+                if self.verbose:
+                    print(f"Moving index to GPU. {ngpus} GPU(s) available.")
+
+                # Use the first GPU
+                res = faiss.StandardGpuResources()
+                self.index = faiss.index_cpu_to_gpu(res, 0, self.index)
+            else:
+                if self.verbose:
+                    print("No GPUs detected by FAISS. Using CPU index.")
+        except Exception as e:
+            print(f"Error moving index to GPU: {e}. Using CPU index.")
+            self.use_gpu = False

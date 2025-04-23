@@ -4,15 +4,35 @@ import os
 import numpy as np
 import heapq
 import threading
-import math
+import torch
 
 class StoreNode:
-    def __init__(self, dim, text_value="", data = None):
+    def __init__(self, dim, text_value="", data=None, use_gpu=True):
         self.data = data
         self.text_value = text_value
         self.index = faiss.IndexFlatIP(dim)
         self.adj_dict = {} # Allows for the ability to get the next node based on the data.
         self.adj = []
+        self.use_gpu = use_gpu and torch.cuda.is_available()
+
+        # Move index to GPU if available and requested
+        if self.use_gpu:
+            self._move_index_to_gpu()
+
+    def _move_index_to_gpu(self):
+        """Move the FAISS index to GPU if available."""
+        try:
+            # Get number of available GPUs
+            ngpus = faiss.get_num_gpus()
+            if ngpus > 0:
+                # Use the first GPU
+                res = faiss.StandardGpuResources()
+                self.index = faiss.index_cpu_to_gpu(res, 0, self.index)
+            else:
+                self.use_gpu = False
+        except Exception as e:
+            print(f"Error moving index to GPU: {e}. Using CPU index.")
+            self.use_gpu = False
 
     def add_child(self, embedding, data, node):
         self.index.add(embedding)
@@ -34,14 +54,12 @@ class StoreNode:
         """Less than comparison, primarily used for heap operations"""
         if not isinstance(other, StoreNode):
             return NotImplemented
-        # Compare by text_value if needed
         return self.text_value < other.text_value
 
     def __eq__(self, other):
         """Equality comparison"""
         if not isinstance(other, StoreNode):
             return NotImplemented
-        # Two nodes are equal if they have the same text_value and data
         return self.text_value == other.text_value and self.data == other.data
 
     @staticmethod
@@ -54,7 +72,7 @@ class StoreNode:
         return v if norm == 0 else v / norm
 
 class StoreTree:
-    def __init__(self, dim, path=None, read=False, verbose=False):
+    def __init__(self, dim, path=None, read=False, verbose=False, use_gpu=True):
         '''
             Needs to store a list of page titles to begin the search.
             Root should not be included: "" (Root Node) -> Ringo Starr -> Songs
@@ -64,6 +82,12 @@ class StoreTree:
         self.verbose = verbose
         self.embedding_dim = dim
         self.write_lock = threading.Lock()
+        self.use_gpu = use_gpu and torch.cuda.is_available()
+
+        if self.use_gpu:
+            print(f"GPU is available. FAISS will use GPU acceleration.")
+        elif use_gpu:
+            print(f"GPU was requested but is not available. Using CPU.")
 
         if (read == "r" and self.folder_path is not None and os.path.exists(path)
             and os.path.exists(os.path.join(path, "tree_metadata.json"))):
@@ -85,6 +109,8 @@ class StoreTree:
                 node_index_path = os.path.join(path, f"node_{node_id}.index")
                 if os.path.exists(node_index_path):
                     new_node.index = faiss.read_index(node_index_path)
+                    if self.use_gpu:
+                        new_node._move_index_to_gpu()
                 nodes_dict[node_id] = new_node
 
             for node_data in tree_data["nodes"]:
@@ -100,7 +126,7 @@ class StoreTree:
             print("StoreTree loaded successfully")
         else:
             print("Creating new StoreTree...")
-            self.root = StoreNode(dim)
+            self.root = StoreNode(dim, use_gpu=self.use_gpu)
 
 
     def write(self, path_embeddings, path_metadata):
@@ -122,7 +148,7 @@ class StoreTree:
                 if node_title in u.adj_dict:
                     u = u.adj_dict[node_title]
                 else:
-                    new_node = StoreNode(self.embedding_dim, node_title, node_data)
+                    new_node = StoreNode(self.embedding_dim, node_title, node_data, use_gpu=self.use_gpu)
                     u.add_child(np.array([embedding]), node_title, new_node)
                     u = new_node
 
@@ -192,7 +218,11 @@ class StoreTree:
                 }
 
                 node_index_path = os.path.join(self.folder_path, f"node_{node_id}.index")
-                faiss.write_index(node.index, node_index_path)
+                # If using GPU, convert index back to CPU before saving
+                index_to_save = node.index
+                if node.use_gpu:
+                    index_to_save = faiss.index_gpu_to_cpu(node.index)
+                faiss.write_index(index_to_save, node_index_path)
                 for i, (title, child_node) in enumerate(node.adj_dict.items()):
                     child_id = f"{node_id}_{i}"
                     node_data["children"].append({
