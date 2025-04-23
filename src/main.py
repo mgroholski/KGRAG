@@ -74,7 +74,6 @@ if __name__=="__main__":
     parser.add_argument("--storepath", type=str, default=None, help="The folder path of that contains the embedding and JSON store to read/write to.")
     parser.add_argument("--operation", default="w", choices=["r", "w"], help="Specifies the operation to perform on the store. Options: r (read), w (write).")
     parser.add_argument('--metric', default="BERTScore", choices=["BERTScore", "BLEURT", "chrF", "all"], help="Specifies the metric to use for evaluation. Options: BERTScore, BLEURT, and chrF.")
-    parser.add_argument('--threads', '-th', default=1, type=int, help="Number of threads to use.")
     args = parser.parse_args()
 
     if not os.path.exists('./output'):
@@ -128,46 +127,41 @@ if __name__=="__main__":
     print(f"Reading dataset and creating embeddings with {args.threads} threads...")
 
     qa_list = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
-        embed_futures = []
-        read_lines = []
-        with open(args.filepath, "r") as data_file:
-            # Assumes one example per line.
-            line_cnt = 0
-            max_line_cnt = args.num_lines
-            for line in data_file:
-                if max_line_cnt is not None and line_cnt < max_line_cnt:
-                    line_cnt += 1
-                    if not line_cnt % 100:
-                        print(f"Parsing line {line_cnt}.")
-                    read_lines.append(line)
-                else:
+
+
+    read_lines = []
+    with open(args.filepath, "r") as data_file:
+        # Assumes one example per line.
+        line_cnt = 0
+        max_line_cnt = args.num_lines
+        for line in data_file:
+            if max_line_cnt is not None and line_cnt < max_line_cnt:
+                line_cnt += 1
+                if not line_cnt % 100:
+                    print(f"Parsing line {line_cnt}.")
+                read_lines.append(line)
+            else:
+                break
+
+    for line in read_lines:
+        line_json = json.loads(line)
+        simple_nq = text_utils.simplify_nq_example(line_json)
+
+        # Extracts correct context (first non-empty long answer) and question.
+        # Read more about the dataset tasks: https://github.com/google-research-datasets/natural-questions
+        if args.test:
+            line_question = simple_nq["question_text"]
+            for idx in range(len(simple_nq["annotations"])):
+                long_answer_data = simple_nq["annotations"][idx]["long_answer"]
+                start_token_idx, end_token_idx = (long_answer_data["start_token"], long_answer_data["end_token"])
+                if start_token_idx != end_token_idx:
+                    line_long_answer_text = "".join(text_utils.get_nq_tokens(simple_nq)[start_token_idx : end_token_idx])
+                    qa_list.append((line_question,line_long_answer_text))
                     break
+        line_document = line_json["document_html"]
+        if args.operation == "w" and retriever:
+            retriever.embed(line_document)
 
-        for line in read_lines:
-            line_json = json.loads(line)
-            simple_nq = text_utils.simplify_nq_example(line_json)
-
-            # Extracts correct context (first non-empty long answer) and question.
-            # Read more about the dataset tasks: https://github.com/google-research-datasets/natural-questions
-            if args.test:
-                line_question = simple_nq["question_text"]
-                for idx in range(len(simple_nq["annotations"])):
-                    long_answer_data = simple_nq["annotations"][idx]["long_answer"]
-                    start_token_idx, end_token_idx = (long_answer_data["start_token"], long_answer_data["end_token"])
-                    if start_token_idx != end_token_idx:
-                        line_long_answer_text = "".join(text_utils.get_nq_tokens(simple_nq)[start_token_idx : end_token_idx])
-                        qa_list.append((line_question,line_long_answer_text))
-                        break
-            line_document = line_json["document_html"]
-            if args.operation == "w" and retriever:
-                future = executor.submit(retriever.embed, line_document)
-                embed_futures.append(future)
-
-        for idx, future in enumerate(embed_futures):
-            print(f"Finished {idx}.")
-            future.result()
-    exit()
     if args.test:
         print("Beginning QA tests...")
 
@@ -190,16 +184,9 @@ if __name__=="__main__":
         }
 
         responses = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
-            retrieve_futures = []
-            for idx,(question, ground_truth_retrieve) in enumerate(qa_list):
-                future = executor.submit(get_responses, idx, objects, question, ground_truth_retrieve)
-                retrieve_futures.append(future)
 
-            for idx, future in enumerate(retrieve_futures):
-                result = future.result()
-                print(f"Finished {idx}.")
-                responses.append(result)
+        for idx,(question, ground_truth_retrieve) in enumerate(qa_list):
+            responses.append(get_responses(idx, objects, question, ground_truth_retrieve))
 
         # Computes stats about the answers.
         candidates, truths = zip(*responses)
