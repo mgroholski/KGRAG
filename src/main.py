@@ -193,8 +193,9 @@ if __name__=="__main__":
                 future = executor.submit(get_responses, idx, objects, question, ground_truth_retrieve)
                 retrieve_futures.append(future)
 
-            for future in retrieve_futures:
+            for idx, future in enumerate(retrieve_futures):
                 result = future.result()
+                print(f"Finished {idx}.")
                 responses.append(result)
 
         # Computes stats about the answers.

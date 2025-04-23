@@ -4,6 +4,7 @@ import os
 import numpy as np
 import heapq
 import threading
+import math
 
 class StoreNode:
     def __init__(self, dim, text_value="", data = None):
@@ -136,18 +137,17 @@ class StoreTree:
                 To use range_query, we'd need to answer "Is there some threshold such that we don't care about answers below?"
         '''
         # Track current avg IP, node, natural language list, list of IPs
-        max_heap = [(0.0, "", self.root, [])]
-        return_list = []
-
         gamma = 0.8
         def scoring_function(score_list):
             n = len(score_list)
-            weights = [gamma ** (n - 1 - i) for i in range(n)]
-            weighted_sum = sum(w * score for w, score in zip(weights, score_list))
+            weights = [math.log(gamma ** (n - 1 - i)) for i in range(n)]
+            weighted_sum = sum(w + math.log(score) for w, score in zip(weights, score_list))
             sum_of_weights = sum(weights)
             return -weighted_sum / sum_of_weights
 
-        while max_heap and len(return_list) < k:
+        max_heap = [(0.0, "", self.root, [])]
+        final_score_max_heap = []
+        while max_heap:
             avg_ip, nl_path, u, ip_list = heapq.heappop(max_heap)
             if len(u.text_value) > 0:
                 if len(nl_path):
@@ -165,9 +165,14 @@ class StoreTree:
                         print("Bad Search: ", (scoring_function(new_score_list), nl_path, node, new_score_list))
                         raise e
             elif u.data != None:
-                return_list.append((-avg_ip, {"path": nl_path, "data": u.data}))
+                heapq.heappush(final_score_max_heap, (avg_ip, {"path": nl_path, "data": u.data}))
 
-        return [path_obj for (_, path_obj) in return_list]
+        return_list = []
+        while final_score_max_heap and len(return_list) < k:
+            score, data = heapq.heappop(final_score_max_heap)
+            return_list.append(data)
+
+        return return_list
 
     def range_query(self, q_embeddings, threshold=0.1):
         raise NotImplementedError()

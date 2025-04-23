@@ -20,11 +20,19 @@ class LlamaAgent:
             print("Download complete.")
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        if torch.backends.mps.is_available():
+            device = torch.device("mps")
+            print("Using MPS device")
+        else:
+            device = torch.device("cpu")
+            print("MPS not available, using CPU")
         self.model = AutoModelForCausalLM.from_pretrained(
             model_path,
             torch_dtype=torch.float16,
-            device_map="auto"
+            device_map="auto" if device == torch.device("cpu") else None
         )
+        if device == torch.device("mps"):
+            self.model = self.model.to(device)
         self.model.eval()
 
     def ask(self, query, max_length=None):
