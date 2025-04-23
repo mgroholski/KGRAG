@@ -10,7 +10,6 @@ from utils import text_utils
 import json
 from agents.google_agent import GoogleAgent
 from stats import BERTScore, CHRF, BLEURT
-import concurrent.futures
 
 def get_responses(idx, objects, question, ground_truth_retrieve):
     logger = objects['logger']
@@ -161,7 +160,7 @@ if __name__=="__main__":
         line_document = line_json["document_html"]
         if args.operation == "w" and retriever:
             retriever.embed(line_document)
-
+    print("Finished reading...")
     if args.test:
         print("Beginning QA tests...")
 
@@ -172,7 +171,6 @@ if __name__=="__main__":
             metrics.append(("BLEURT", BLEURT.BLEURT(logger)))
         if args.metric == "chrF" or args.metric == "all":
             metrics.append(("chrF", CHRF.chrF(logger)))
-
         if not len(metrics):
             raise NotImplementedError()
 
@@ -192,7 +190,7 @@ if __name__=="__main__":
         candidates, truths = zip(*responses)
         for metric_n, metric in metrics:
             metric.score(candidates, truths)
-            print("Making graphs...")
+            print(f"Making graphs for {metric_n}...")
             metric.plt(f"./output/{metric_n}/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}")
     else:
         print("Beginning user QA retrieval...")
