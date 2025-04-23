@@ -131,6 +131,7 @@ if __name__=="__main__":
     qa_list = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
         embed_futures = []
+        read_lines = []
         with open(args.filepath, "r") as data_file:
             # Assumes one example per line.
             line_cnt = 0
@@ -140,31 +141,34 @@ if __name__=="__main__":
                     line_cnt += 1
                     if not line_cnt % 100:
                         print(f"Parsing line {line_cnt}.")
-
-                    line_json = json.loads(line)
-                    simple_nq = text_utils.simplify_nq_example(line_json)
-
-                    # Extracts correct context (first non-empty long answer) and question.
-                    # Read more about the dataset tasks: https://github.com/google-research-datasets/natural-questions
-                    if args.test:
-                        line_question = simple_nq["question_text"]
-                        for idx in range(len(simple_nq["annotations"])):
-                            long_answer_data = simple_nq["annotations"][idx]["long_answer"]
-                            start_token_idx, end_token_idx = (long_answer_data["start_token"], long_answer_data["end_token"])
-                            if start_token_idx != end_token_idx:
-                                line_long_answer_text = "".join(text_utils.get_nq_tokens(simple_nq)[start_token_idx : end_token_idx])
-                                qa_list.append((line_question,line_long_answer_text))
-                                break
-                    line_document = line_json["document_html"]
-                    if args.operation == "w" and retriever:
-                        future = executor.submit(retriever.embed, line_document)
-                        embed_futures.append(future)
+                    read_lines.append(line)
                 else:
                     break
 
-            for idx, future in enumerate(embed_futures):
-                print(f"Finished {idx}.")
-                future.result()
+        for line in read_lines:
+            line_json = json.loads(line)
+            simple_nq = text_utils.simplify_nq_example(line_json)
+
+            # Extracts correct context (first non-empty long answer) and question.
+            # Read more about the dataset tasks: https://github.com/google-research-datasets/natural-questions
+            if args.test:
+                line_question = simple_nq["question_text"]
+                for idx in range(len(simple_nq["annotations"])):
+                    long_answer_data = simple_nq["annotations"][idx]["long_answer"]
+                    start_token_idx, end_token_idx = (long_answer_data["start_token"], long_answer_data["end_token"])
+                    if start_token_idx != end_token_idx:
+                        line_long_answer_text = "".join(text_utils.get_nq_tokens(simple_nq)[start_token_idx : end_token_idx])
+                        qa_list.append((line_question,line_long_answer_text))
+                        break
+            line_document = line_json["document_html"]
+            if args.operation == "w" and retriever:
+                future = executor.submit(retriever.embed, line_document)
+                embed_futures.append(future)
+
+        for idx, future in enumerate(embed_futures):
+            print(f"Finished {idx}.")
+            future.result()
+    exit()
     if args.test:
         print("Beginning QA tests...")
 
