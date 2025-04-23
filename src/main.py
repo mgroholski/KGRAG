@@ -62,7 +62,6 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
 
     return (retrieval_answer, nq_answer)
 
-
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Embeds the table data and allows for path retrieval.")
     parser.add_argument('filepath')

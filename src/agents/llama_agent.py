@@ -1,6 +1,6 @@
 import os
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+import tensorflow as tf
+from transformers import TFAutoModelForCausalLM, AutoTokenizer
 from huggingface_hub import snapshot_download, login
 class LlamaAgent:
     def __init__(self):
@@ -20,35 +20,35 @@ class LlamaAgent:
             print("Download complete.")
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        if torch.backends.mps.is_available():
-            device = torch.device("mps")
-            print("Using MPS device")
+
+        # Check for GPU availability
+        gpus = tf.config.list_physical_devices('GPU')
+        if gpus:
+            print(f"Using GPU: {gpus[0]}")
+            # Set memory growth to avoid allocating all GPU memory
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
         else:
-            device = torch.device("cpu")
-            print("MPS not available, using CPU")
-        self.model = AutoModelForCausalLM.from_pretrained(
+            print("GPU not available, using CPU")
+
+        self.model = TFAutoModelForCausalLM.from_pretrained(
             model_path,
-            torch_dtype=torch.float16,
-            device_map="auto" if device == torch.device("cpu") else None
+            dtype=tf.float16
         )
-        if device == torch.device("mps"):
-            self.model = self.model.to(device)
-        self.model.eval()
 
     def ask(self, query, max_length=None):
         if max_length is None:
             max_length = 512
 
-        inputs = self.tokenizer(query, return_tensors="pt").to(self.model.device)
-        with torch.no_grad():
-            output = self.model.generate(
-                inputs["input_ids"],
-                attention_mask=inputs["attention_mask"],
-                max_new_tokens=max_length,
-                do_sample=True,
-                temperature=0.7,
-                top_p=0.9,
-                pad_token_id=self.tokenizer.eos_token_id
-            )
+        inputs = self.tokenizer(query, return_tensors="tf")
+        output = self.model.generate(
+            inputs["input_ids"],
+            attention_mask=inputs["attention_mask"],
+            max_new_tokens=max_length,
+            do_sample=True,
+            temperature=0.7,
+            top_p=0.9,
+            pad_token_id=self.tokenizer.eos_token_id
+        )
         response = self.tokenizer.decode(output[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
         return response
