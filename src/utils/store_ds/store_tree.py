@@ -127,52 +127,47 @@ class StoreTree:
                     u = new_node
 
     def nn_query(self, q_embeddings, k=10):
-        '''
-            1. Initialize priority queue with root.
-            2. For each child node, calculate average inner product.
-            3. Add node to queue ranked by avg inner product.
+            '''
+                1. Initialize priority queue with root.
+                2. For each child node, calculate average inner product.
+                3. Add node to queue ranked by avg inner product.
 
-            Concerns
-                - We're searching through the entire tree. It may be worthwhile to optimize this by searching with range_query.
-                To use range_query, we'd need to answer "Is there some threshold such that we don't care about answers below?"
-        '''
-        # Track current avg IP, node, natural language list, list of IPs
-        gamma = 0.8
-        def scoring_function(score_list):
-            n = len(score_list)
-            weights = [math.log(gamma ** (n - 1 - i)) for i in range(n)]
-            weighted_sum = sum(w + math.log(score) for w, score in zip(weights, score_list))
-            sum_of_weights = sum(weights)
-            return -weighted_sum / sum_of_weights
+                Concerns
+                    - We're searching through the entire tree. It may be worthwhile to optimize this by searching with range_query.
+                    To use range_query, we'd need to answer "Is there some threshold such that we don't care about answers below?"
+            '''
+            # Track current avg IP, node, natural language list, list of IPs
+            max_heap = [(0.0, "", self.root, [])]
+            return_list = []
 
-        max_heap = [(0.0, "", self.root, [])]
-        final_score_max_heap = []
-        while max_heap:
-            avg_ip, nl_path, u, ip_list = heapq.heappop(max_heap)
-            if len(u.text_value) > 0:
-                if len(nl_path):
-                    nl_path += ", "
-                nl_path += f"{u.text_value}"
+            gamma = 0.8
+            scoring_function = lambda a : (-(sum([((gamma ** (len(new_score_list) - 1 - idx)) * i) for idx, i in enumerate(new_score_list)]) / sum([(gamma ** (len(new_score_list) - 1 - idx)) for idx in range(len(new_score_list))])))
+            while max_heap and len(return_list) < k:
+                avg_ip, nl_path, u, ip_list = heapq.heappop(max_heap)
+                if len(u.text_value) > 0:
+                    if len(nl_path):
+                        nl_path += ", "
+                    nl_path += f"{u.text_value}"
 
-            if len(u.adj) > 0:
-                child_vals = u.search_children(q_embeddings)
-                for dist, node in child_vals:
-                    new_score_list = ip_list + [dist]
-                    try:
-                        heapq.heappush(max_heap, (scoring_function(new_score_list), nl_path, node, new_score_list))
-                    except Exception as e:
-                        print("Heap: ", max_heap)
-                        print("Bad Search: ", (scoring_function(new_score_list), nl_path, node, new_score_list))
-                        raise e
-            elif u.data != None:
-                heapq.heappush(final_score_max_heap, (avg_ip, {"path": nl_path, "data": u.data}))
+                if len(u.adj) > 0:
+                    child_vals = u.search_children(q_embeddings)
+                    for dist, node in child_vals:
+                        new_score_list = ip_list + [dist]
+                        try:
+                            heapq.heappush(max_heap, (scoring_function(new_score_list), nl_path, node, new_score_list))
+                        except Exception as e:
+                            print("Heap: ", max_heap)
+                            print("Bad Search: ", (scoring_function(new_score_list), nl_path, node, new_score_list))
+                            raise e
 
-        return_list = []
-        while final_score_max_heap and len(return_list) < k:
-            score, data = heapq.heappop(final_score_max_heap)
-            return_list.append(data)
+                elif u.data != None:
+                    return_list.append((-avg_ip, {"path": nl_path, "data": u.data}))
 
-        return return_list
+            # print("Retrieve List: ")
+            # for (score,path) in return_list:
+            #     print(f"\t Score: {score}\n\t Path:{path}")
+
+            return [path_obj for (_, path_obj) in return_list]
 
     def range_query(self, q_embeddings, threshold=0.1):
         raise NotImplementedError()
