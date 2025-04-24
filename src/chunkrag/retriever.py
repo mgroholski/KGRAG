@@ -95,7 +95,7 @@ class Retriever:
                 chunk = self.agent.trim_context([chunk])[0]
 
             prompt = f"""
-            Prepend your answer to the query with \"<start_a>\" and append your answer with </end_a>. For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>\"
+            Prepend your answer to the query with \"<start_a>\" and append your answer with </end_a>. For example, if I asked \"On a scale of 1 to 10, how relevant is this chunk to the query above?\" You would reply \"<start_a>7</end_a>\"
             Query: {query}
             Chunk: {chunk}
 
