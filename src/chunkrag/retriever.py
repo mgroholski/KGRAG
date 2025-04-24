@@ -90,7 +90,7 @@ class Retriever:
                 seen.add(chunk)
 
         # LLM-based relevance filtering
-        token_amount = 2048
+        token_amount = 512
         filtered_chunks = []
         for chunk in combined:
             if hasattr(self.agent, "trim_context"):

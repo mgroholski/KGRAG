@@ -45,8 +45,8 @@ class LlamaAgent:
             attention_mask=inputs["attention_mask"],
             max_new_tokens=max_length,
             do_sample=True,
-            temperature=0.7,
-            top_p=0.9,
+            temperature=0.1,
+            top_p=0.85,
             pad_token_id=self.tokenizer.eos_token_id
         )
 
@@ -57,7 +57,7 @@ class LlamaAgent:
         if not context:
             return []
 
-        max_tokens = 120000
+        max_tokens = 100000
         trimmed_context = []
         current_tokens = 0
 

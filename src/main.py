@@ -18,7 +18,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     pipeline = objects['pipeline']
 
     # Generate ground truth.
-    token_amount = 2048
+    token_amount = 512
     nq_answer = ""
     while not len(nq_answer):
         if hasattr(agent, "trim_context"):
