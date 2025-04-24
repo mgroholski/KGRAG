@@ -45,7 +45,7 @@ class VanillaRetriever:
         Retrieve top-10 most similar passages for the given query.
         '''
         q_embedding = self.model.encode([query])
-        retrieve_obj_list = self.store.nn_query(q_embedding, 10)
+        retrieve_obj_list = self.store.nn_query(q_embedding, 3)
         return retrieve_obj_list
 
     def close(self):

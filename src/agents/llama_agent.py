@@ -37,7 +37,7 @@ class LlamaAgent:
 
     def ask(self, query, max_length=None):
         if max_length is None:
-            max_length = 512
+            max_length = 128
 
         inputs = self.tokenizer(query, return_tensors="pt").to(self.device)
         output = self.model.generate(
@@ -45,8 +45,8 @@ class LlamaAgent:
             attention_mask=inputs["attention_mask"],
             max_new_tokens=max_length,
             do_sample=True,
-            temperature=0.1,
-            top_p=0.85,
+            temperature=0.2,
+            top_p=0.2,
             pad_token_id=self.tokenizer.eos_token_id
         )
 

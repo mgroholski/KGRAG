@@ -18,7 +18,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     pipeline = objects['pipeline']
 
     # Generate ground truth.
-    token_amount = 512
+    token_amount = 256
     nq_answer = ""
     retry_cnt = 0
     while not len(nq_answer) and retry_cnt < 10:
