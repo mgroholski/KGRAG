@@ -107,11 +107,17 @@ class Retriever:
             """
             try:
                 score = None
-                while score == None:
+                retry_cnt = 0
+                while score == None and retry_cnt < 10:
                     response = self.agent.ask(prompt, max_length=token_amount)
                     match = re.search(r'<start_a>(.*?)</end_a>', response)
                     if match:
                         score = int(match.group(1))
+                    retry_cnt += 1
+
+                if retry_cnt == 10 and score == None:
+                    raise Exception(f"Could not get good LLM output format for {prompt}.")
+
                 if score >= 6:
                     filtered_chunks.append(chunk)
             except Exception as e:

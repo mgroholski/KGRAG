@@ -20,7 +20,8 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     # Generate ground truth.
     token_amount = 512
     nq_answer = ""
-    while not len(nq_answer):
+    retry_cnt = 0
+    while not len(nq_answer) and retry_cnt < 10:
         if hasattr(agent, "trim_context"):
             ground_truth_retrieve = agent.trim_context([ground_truth_retrieve])[0]
 
@@ -35,6 +36,10 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
         if match:
             nq_answer = match.group(1)
+        retry_cnt += 1
+
+    if retry_cnt == 10 and not len(nq_answer):
+        raise Exception(f"Could not generate answer for {nq_query}.")
 
     # Generate retrieval answer.
     retrieval_query = f"Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>\". Make your response under or equal to {token_amount} tokens."
@@ -62,11 +67,16 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         {question}
     """
     retrieval_answer = ""
-    while not len(retrieval_answer):
+    retry_cnt = 0
+    while not len(retrieval_answer) and retry_cnt < 10:
         answer = agent.ask(retrieval_query, max_length=token_amount)
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
         if match:
             retrieval_answer = match.group(1)
+        retry_cnt += 1
+
+    if retry_cnt == 10 and not len(retrieval_answer):
+        raise Exception(f"Could not generate answer for {retrieval_query}.")
 
     # Logs the response of the query.
     logger.log(f"Question {idx + 1}")
