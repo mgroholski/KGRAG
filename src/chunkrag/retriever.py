@@ -90,6 +90,7 @@ class Retriever:
                 seen.add(chunk)
 
         # LLM-based relevance filtering
+        token_amount = 2048
         filtered_chunks = []
         for chunk in combined:
             if hasattr(self.agent, "trim_context"):
@@ -102,12 +103,12 @@ class Retriever:
             On a scale of 1 to 10, how relevant is this chunk to the query above?
             Only return a number from 1 to 10.
 
-            Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"On a scale of 1 to 10, how relevant is this chunk to the query above?\" You would reply \"<start_a>7</end_a>\"
+            Make your response under or equal to {token_amount} tokens. Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"On a scale of 1 to 10, how relevant is this chunk to the query above?\" You would reply \"<start_a>7</end_a>\"
             """
             try:
                 score = None
                 while score == None:
-                    response = self.agent.ask(prompt, max_length=2048)
+                    response = self.agent.ask(prompt, max_length=token_amount)
                     match = re.search(r'<start_a>(.*?)</end_a>', response)
                     if match:
                         score = int(match.group(1))

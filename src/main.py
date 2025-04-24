@@ -18,25 +18,26 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     pipeline = objects['pipeline']
 
     # Generate ground truth.
+    token_amount = 2048
     nq_answer = ""
     while not len(nq_answer):
         if hasattr(agent, "trim_context"):
             ground_truth_retrieve = agent.trim_context([ground_truth_retrieve])[0]
 
-        nq_query = f"""Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>\" Use only the context to answer the query.
+        nq_query = f"""Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>\." Make your response under or equal to {token_amount} tokens. Use only the context to answer the query.
         CONTEXT:
             {ground_truth_retrieve}
 
         QUERY:
             {question}
         """
-        answer = agent.ask(nq_query, max_length = 2048)
+        answer = agent.ask(nq_query, max_length = token_amount)
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
         if match:
             nq_answer = match.group(1)
 
     # Generate retrieval answer.
-    retrieval_query = "Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>\""
+    retrieval_query = f"Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>\". Make your response under or equal to {token_amount} tokens."
     retrieve_list = []
     if pipeline != None:
         retrieve_list = retriever.retrieve(question)
@@ -62,7 +63,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     """
     retrieval_answer = ""
     while not len(retrieval_answer):
-        answer = agent.ask(retrieval_query, max_length=2048)
+        answer = agent.ask(retrieval_query, max_length=token_amount)
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
         if match:
             retrieval_answer = match.group(1)
