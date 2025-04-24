@@ -107,7 +107,7 @@ class Retriever:
             try:
                 score = None
                 while score == None:
-                    response = self.agent.ask(prompt, max_length=1024)
+                    response = self.agent.ask(prompt, max_length=2048)
                     match = re.search(r'<start_a>(.*?)</end_a>', response)
                     if match:
                         score = int(match.group(1))

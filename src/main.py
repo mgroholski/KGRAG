@@ -30,7 +30,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         QUERY:
             {question}
         """
-        answer = agent.ask(nq_query, max_length = 1024)
+        answer = agent.ask(nq_query, max_length = 2048)
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
         if match:
             nq_answer = match.group(1)
@@ -62,7 +62,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     """
     retrieval_answer = ""
     while not len(retrieval_answer):
-        answer = agent.ask(retrieval_query, max_length=1024)
+        answer = agent.ask(retrieval_query, max_length=2048)
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
         if match:
             retrieval_answer = match.group(1)
