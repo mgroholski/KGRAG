@@ -78,12 +78,10 @@ class Store:
             if not os.path.exists(self.folder_path):
                 os.makedirs(self.folder_path)
 
-            # Convert GPU index back to CPU for storage if needed
             index_to_save = self.index
             if self.use_gpu:
-                if self.verbose:
-                    print("Moving index back to CPU for storage.")
-                index_to_save = faiss.index_gpu_to_cpu(self.index)
+                gpu_index = self.index
+                index_to_save = faiss.extract_index_ivf(gpu_index).index
 
             faiss_path = os.path.join(self.folder_path, "embeddings.index")
             faiss.write_index(index_to_save, faiss_path)

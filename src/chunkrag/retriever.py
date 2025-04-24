@@ -91,7 +91,11 @@ class Retriever:
         # LLM-based relevance filtering
         filtered_chunks = []
         for chunk in combined:
+            if hasattr(self.agent, "trim_context"):
+                chunk = self.agent.trim_context([chunk])[0]
+
             prompt = f"""
+            Prepend your answer to the query with \"<start_a>\" and append your answer with </end_a>. For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>\"
             Query: {query}
             Chunk: {chunk}
 

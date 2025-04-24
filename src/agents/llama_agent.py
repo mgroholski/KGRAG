@@ -4,9 +4,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from huggingface_hub import snapshot_download, login
 class LlamaAgent:
     def __init__(self):
-        model_id = "meta-llama/Meta-Llama-3-8B"
+        model_id = "meta-llama/Llama-3.1-8B"
         models_dir = "./models"
-        model_path = os.path.join(models_dir, "Meta-Llama-3-8B")
+        model_path = os.path.join(models_dir, "Meta-Llama-3.1-8B")
 
         os.makedirs(models_dir, exist_ok=True)
         if not os.path.exists(model_path):
@@ -21,7 +21,7 @@ class LlamaAgent:
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
 
-        # Check for GPU availability
+        # Check for GPU availabilityma
         if torch.cuda.is_available():
             print(f"Using GPU: {torch.cuda.get_device_name(0)}")
             self.device = torch.device("cuda")
@@ -49,5 +49,23 @@ class LlamaAgent:
             top_p=0.9,
             pad_token_id=self.tokenizer.eos_token_id
         )
+
         response = self.tokenizer.decode(output[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
         return response
+
+    def trim_context(self, context):
+        if not context:
+            return []
+
+        max_tokens = 120000
+        trimmed_context = []
+        current_tokens = 0
+
+        for item in reversed(context):
+            tokens = len(self.tokenizer.encode(item))
+            if current_tokens + tokens > max_tokens:
+                break
+            trimmed_context.append(item)
+            current_tokens += tokens
+
+        return list(reversed(trimmed_context))

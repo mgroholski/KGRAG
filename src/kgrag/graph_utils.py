@@ -44,6 +44,9 @@ def _clean_text(text):
     text = re.sub(r'\n', ', ', text)
     return text
 
+def _clean_int(text)->int:
+    return int(re.sub(r'[^0-9]', '', text))
+
 def _extract_first_level_tags(soup, tags):
     found_tags = soup.find_all(tags)
     first_level_tags = []
@@ -67,7 +70,34 @@ def _extract_table_graph(soup, root=None):
     data_between = True
     found_head = False
 
+
+    def flush_table(cur_parent):
+        # Cleans out column headings if no new heading.
+        if len(col_headings):
+            if cur_parent:
+                node_headings = []
+                node_rows = []
+                for col_heading in col_headings:
+                    node_headings.append(col_heading.value)
+                    if not len(node_rows):
+                        for data in col_heading.data:
+                            node_rows.append([])
+                            for d in data:
+                                node_rows[-1].append(d)
+                    else:
+                        for idx, data in enumerate(col_heading.data):
+                            for d in data:
+                                node_rows[idx].append(d)
+                cur_parent.data.append({"column headings": node_headings, "rows": node_rows})
+                cur_parent.type = NodeTagType.ARRAY_TABLE
+            else:
+                print(f"End: Found col_headings before parent: {soup}")
+                exit()
+
     row_store = []
+    head_span = []
+    max_header_row_span = 1
+    data_seen = False
     for row in table_rows:
         row_table = row.find("table")
         if row_table:
@@ -84,12 +114,12 @@ def _extract_table_graph(soup, root=None):
             continue
 
         # Assign elements with th and colspan > 1 to th_colspan name
-
         row_elements = row.find_all(["th", "td"])
         for element in row_elements:
-            if element.name == "th" and element.get("colspan") and int(re.sub(r'[^0-9]', '', element.get("colspan"))) > 1:
+            if element.name == "th" and element.get("colspan") and _clean_int(element.get("colspan")) > 1:
                 element.name = "th_colspan"
-        if len(row_elements) == 1:
+
+        if not len(col_headings) and len(row_elements) == 1:
             element = row_elements[0]
             if element.name == "th_colspan":
                 # Cleans out column headings if new table.
@@ -119,7 +149,7 @@ def _extract_table_graph(soup, root=None):
             data_between = True
 
             row_heading = None
-            row_tags = set([(element.name if element.name != "th_colspan" else "th") for element in row_elements])
+            row_tags = set([(element.name if element.name != "th_colspan" and _clean_text(element.text).lower() != "n/a" else "th") for element in row_elements])
             if len(row_elements):
                 if row_elements[0].name == "th" and len(row_tags) > 1:
                     element = row_elements[0]
@@ -128,39 +158,85 @@ def _extract_table_graph(soup, root=None):
                         row_heading.data.append(_clean_text(element.text))
                 else:
                     if len(row_tags) == 1 and "th" in row_tags:
+                        # if data in between flush it
+                        if data_seen:
+                            flush_table(cur_parent)
+                            row_store = []
+                            data_seen = False
+                            col_headings = []
+
                         for element in row_elements:
-                            col_headings.append(Node(_clean_text(element.text), NodeTagType.TH if element.name=="th" else NodeTagType.TH_COLSPAN))
+                            if element.get("rowspan"):
+                                max_header_row_span = max(max_header_row_span, _clean_int(element.get("rowspan")))
+
+                        head_idx = 0
+                        for element in row_elements:
+                            row_span = 1
+                            if element.get("rowspan"):
+                                row_span = _clean_int(element.get("rowspan"))
+                            col_span = 1
+                            if element.get("colspan"):
+                                col_span = _clean_int(element.get("colspan"))
+                            for _ in range(col_span):
+                                if head_idx < len(head_span):
+                                    # Skips if current head column has max row span
+                                    while head_idx < len(head_span) and head_span[head_idx][0] == max_header_row_span:
+                                        head_idx += 1
+
+                                    if head_idx == len(head_span):
+                                        head_span.append((row_span, _clean_text(element.text)))
+                                    else:
+                                        head_span[head_idx] = (head_span[head_idx][0] + row_span, head_span[head_idx][1] + f" {_clean_text(element.text)}")
+                                else:
+                                    head_span.append((row_span, _clean_text(element.text)))
+                                head_idx += 1
                     else:
+                        for _, head in head_span:
+                            col_headings.append(Node(head, NodeTagType.TH if element.name=="th" else NodeTagType.TH_COLSPAN))
+                        max_header_row_span = 1
+                        head_span = []
+                        data_seen = True
+
+                        if len(col_headings):
+                            # Creates row_store if it doesn't exist yet.
+                            if not len(row_store):
+                                row_store = [[] for _ in range(len(col_headings))]
+
+                            for i in range(len(row_store)):
+                                col_headings[i].data.append([])
+                                for _ in range(len(row_store[i])):
+                                    cnt, txt = row_store[i].pop(0)
+                                    col_headings[i].data[-1].append(txt)
+                                    if cnt > 1:
+                                        row_store[i].append((cnt-1, txt))
+
                         idx = 0
                         last_idx = False
                         for element in row_elements:
                             if len(col_headings):
                                 n_headings = len(col_headings)
-                                if not len(row_store):
-                                    row_store = [[] for _ in range(n_headings)]
-
-                                while len(row_store[idx]) and not last_idx:
-                                    last_idx = (idx == (n_headings - 1))
-                                    col_headings[idx].data.append([])
-                                    for _ in range(len(row_store[idx])):
-                                        cnt, txt = row_store[idx].pop(0)
-                                        col_headings[idx].data[-1].append(txt)
-                                        if cnt > 1:
-                                            row_store[idx].append((cnt-1, txt))
-                                    idx = min(idx + 1, n_headings - 1)
 
                                 row_span = 1
                                 if element.get("rowspan"):
-                                    row_span = int(element.get("rowspan"))
+                                    row_span = _clean_int(element.get("rowspan"))
+
+                                col_span = 1
+                                if element.get("colspan"):
+                                    col_span = _clean_int(element.get("colspan"))
+
                                 element_text = _clean_text(element.text)
-                                if not last_idx:
-                                    col_headings[idx].data.append([element_text])
-                                    last_idx = (idx == (n_headings - 1))
-                                else:
+                                # If data spans multiple columns, add that data to the columns.
+                                for _ in range(col_span):
+                                    while len(col_headings[idx].data[-1]) and not last_idx:
+                                        idx = min(idx + 1, n_headings - 1)
+                                        last_idx = (idx == (n_headings - 1))
+
                                     col_headings[idx].data[-1].append(element_text)
-                                if row_span > 1:
-                                    row_store[idx].append((row_span-1, element_text))
-                                idx = min(idx + 1, n_headings - 1)
+
+                                    # Put multi-row data back into row_store if it still has rows.
+                                    if row_span > 1:
+                                        row_store[idx].append((row_span-1, element_text))
+                                    idx = min(idx + 1, n_headings - 1)
                             else:
                                 if row_heading:
                                     row_heading.data.append(_clean_text(element.text))
@@ -174,28 +250,7 @@ def _extract_table_graph(soup, root=None):
                     exit()
 
     # Cleans out column headings if no new heading.
-    if len(col_headings):
-        row_store = []
-        if cur_parent:
-            node_headings = []
-            node_rows = []
-            for col_heading in col_headings:
-                node_headings.append(col_heading.value)
-                if not len(node_rows):
-                    for data in col_heading.data:
-                        node_rows.append([])
-                        for d in data:
-                            node_rows[-1].append(d)
-                else:
-                    for idx, data in enumerate(col_heading.data):
-                        for d in data:
-                            node_rows[idx].append(d)
-            cur_parent.data.append({"column headings": node_headings, "rows": node_rows})
-            cur_parent.type = NodeTagType.ARRAY_TABLE
-        else:
-            print(f"End: Found col_headings before parent: {soup}")
-            exit()
-
+    flush_table(cur_parent)
     return root
 
 def extract_relationship_graphs(simple_text: str):

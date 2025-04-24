@@ -10,6 +10,7 @@ from utils import text_utils
 import json
 from agents.google_agent import GoogleAgent
 from stats import BERTScore, CHRF, BLEURT
+import re
 
 def get_responses(idx, objects, question, ground_truth_retrieve):
     logger = objects['logger']
@@ -17,22 +18,32 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     pipeline = objects['pipeline']
 
     # Generate ground truth.
-    nq_query = f"""Use only the context to answer the query.
-    CONTEXT:
-        {ground_truth_retrieve}
+    nq_answer = ""
+    while not len(nq_answer):
+        if hasattr(agent, "trim_context"):
+            ground_truth_retrieve = agent.trim_context([ground_truth_retrieve])[0]
 
-    QUERY:
-        {question}
-    """
+        nq_query = f"""Prepend your answer to the query with \"<start_a>\" and append your answer with </end_a>. For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>\" Use only the context to answer the query.
+        CONTEXT:
+            {ground_truth_retrieve}
 
-    nq_answer = agent.ask(nq_query, max_length = 500)
+        QUERY:
+            {question}
+        """
+        answer = agent.ask(nq_query, max_length = 512)
+        match = re.search(r'<start_a>(.*?)</end_a>', answer)
+        if match:
+            nq_answer = match.group(1)
 
     # Generate retrieval answer.
-    retrieval_query = ""
+    retrieval_query = "Prepend your answer to the query with \"<start_a>\" and append your answer with </end_a>. For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>\""
     retrieve_list = []
     if pipeline != None:
         retrieve_list = retriever.retrieve(question)
-        retrieval_query = "Use only the context to answer the query. "
+        if hasattr(agent, "trim_context"):
+            retrieve_list = agent.trim_context(retrieve_list)
+
+        retrieval_query = "Use only the context to answer the query."
         if pipeline == "kg":
             retrieval_query += "We will provide data as context with an associated path of headings that lead to where to the data is located.\n"
 
@@ -49,8 +60,12 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     QUERY:
         {question}
     """
-
-    retrieval_answer = agent.ask(retrieval_query, max_length = 512)
+    retrieval_answer = ""
+    while not len(retrieval_answer):
+        answer = agent.ask(retrieval_query, max_length=512)
+        match = re.search(r'<start_a>(.*?)</end_a>', answer)
+        if match:
+            retrieval_answer = match.group(1)
 
     # Logs the response of the query.
     logger.log(f"Question {idx + 1}")
