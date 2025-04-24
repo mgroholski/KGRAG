@@ -190,7 +190,7 @@ def _extract_table_graph(soup, root=None):
                     for idx, data in enumerate(col_heading.data):
                         for d in data:
                             node_rows[idx].append(d)
-            cur_parent.data = {"column headings": node_headings, "rows": node_rows}
+            cur_parent.data.append({"column headings": node_headings, "rows": node_rows})
             cur_parent.type = NodeTagType.ARRAY_TABLE
         else:
             print(f"End: Found col_headings before parent: {soup}")

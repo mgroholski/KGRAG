@@ -155,6 +155,7 @@ if __name__=="__main__":
                     qa_list.append((line_question,line_long_answer_text))
                     break
         line_document = line_json["document_html"]
+
         if args.operation == "w" and retriever:
             retriever.embed(line_document)
     print("Finished reading...")
