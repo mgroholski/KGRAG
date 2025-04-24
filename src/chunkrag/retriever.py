@@ -2,6 +2,7 @@ from utils.store_utils import Store
 import numpy as np
 from rank_bm25 import BM25Okapi
 from nltk.tokenize import word_tokenize
+import re
 
 class Retriever:
     def __init__(self, embedding_dict, store_dict, agent, verbose=False):
@@ -103,8 +104,12 @@ class Retriever:
             Only return a number from 1 to 10.
             """
             try:
-                response = self.agent.ask(prompt, max_length=1024)
-                score = int(''.join(filter(str.isdigit, response)))
+                score = None
+                while score == None:
+                    response = self.agent.ask(prompt, max_length=1024)
+                    match = re.search(r'<start_a>(.*?)</end_a>', response)
+                    if match:
+                        score = int(match.group(1))
                 if score >= 6:
                     filtered_chunks.append(chunk)
             except Exception as e:
