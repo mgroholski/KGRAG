@@ -31,7 +31,7 @@ class LlamaAgent:
 
         self.model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            torch_dtype=torch.float16,
+            torch_dtype="auto",
             device_map="auto"
         )
 
