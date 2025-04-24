@@ -24,7 +24,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         if hasattr(agent, "trim_context"):
             ground_truth_retrieve = agent.trim_context([ground_truth_retrieve])[0]
 
-        nq_query = f"""Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>\." Make your response under or equal to {token_amount} tokens. Use only the context to answer the query.
+        nq_query = f"""Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>.\" Make your response under or equal to {token_amount} tokens. Use only the context to answer the query.
         CONTEXT:
             {ground_truth_retrieve}
 
