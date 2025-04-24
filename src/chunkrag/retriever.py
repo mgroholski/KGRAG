@@ -103,7 +103,7 @@ class Retriever:
             Only return a number from 1 to 10.
             """
             try:
-                response = self.agent.ask(prompt, max_length=10)
+                response = self.agent.ask(prompt, max_length=1024)
                 score = int(''.join(filter(str.isdigit, response)))
                 if score >= 6:
                     filtered_chunks.append(chunk)
