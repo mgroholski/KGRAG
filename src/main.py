@@ -72,7 +72,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         retry_cnt += 1
 
     if retry_cnt == 2 and not len(nq_answer):
-        raise Exception(f"Could not generate answer for {nq_query}.")
+        raise Exception(f"Could not generate ground answer for {nq_query}.")
 
     # Generate retrieval answer.
     retrieval_query = f"""
@@ -148,7 +148,10 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         retry_cnt += 1
 
     if retry_cnt == 2 and not len(retrieval_answer):
-        raise Exception(f"Could not generate answer for {retrieval_query}.")
+        if pipeline == "kgrag":
+            raise Exception(f"Could not generate answer for {retrieval_query}.")
+        else:
+            retrieval_answer = "Could not generate answer."
 
     # Logs the response of the query.
     logger.log(f"Question {idx + 1}")
