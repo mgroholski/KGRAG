@@ -11,7 +11,7 @@ class VanillaRetriever:
 
         if "storepath" in store_dict:
             self.operation = store_dict["operation"]
-            self.store = StoreTree(self.model_dim, store_dict["storepath"], self.operation, verbose)
+            self.store = Store(self.model_dim, store_dict["storepath"], self.operation, verbose)
         else:
             raise Exception("Could not read store dictionary information. Please format correctly.")
 
