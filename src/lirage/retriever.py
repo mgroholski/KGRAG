@@ -63,7 +63,8 @@ class LIRAGERetriever:
 
 
     def close(self):
-        self.store.close()
+        if self.operation != "r":
+            self.store.save()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
