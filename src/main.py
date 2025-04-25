@@ -33,6 +33,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
             {question}
         """
         answer = agent.ask(nq_query, max_length = token_amount)
+        print("A: ", answer)
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
         if match:
             nq_answer = match.group(1)
@@ -185,6 +186,9 @@ if __name__=="__main__":
         if args.operation == "w" and retriever:
             retriever.embed(line_document)
     print("Finished reading...")
+    if retriever != None:
+        retriever.write()
+
     if args.test:
         print("Beginning QA tests...")
 
@@ -229,5 +233,3 @@ if __name__=="__main__":
                 print(f"Rank {idx}:\n\t Data: {item}")
 
     logger.close()
-    if retriever != None:
-        retriever.close()

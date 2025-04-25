@@ -73,7 +73,7 @@ class Store:
 
         return retrieve_chunks
 
-    def close(self):
+    def write(self):
         if self.folder_path:
             if not os.path.exists(self.folder_path):
                 os.makedirs(self.folder_path)

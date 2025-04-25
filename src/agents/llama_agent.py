@@ -21,10 +21,13 @@ class LlamaAgent:
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
 
-        # Check for GPU availabilityma
+        # Check for GPU availability
         if torch.cuda.is_available():
             print(f"Using GPU: {torch.cuda.get_device_name(0)}")
             self.device = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            print("Using MPS.")
+            self.device = torch.device("mps")
         else:
             print("GPU not available, using CPU")
             self.device = torch.device("cpu")

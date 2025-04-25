@@ -126,9 +126,9 @@ class Retriever:
 
         return filtered_chunks
 
-    def close(self):
+    def write(self):
         if self.operation != "r":
-            self.store.close()
+            self.store.write()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        self.write()
