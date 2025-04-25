@@ -132,7 +132,9 @@ class Retriever:
                         The previous response COMPLETELY IGNORED the explicitly provided instructions.
                         THIS IS YOUR FINAL WARNING.
                         Failure to follow instructions precisely in your next response will result in IMMEDIATE TERMINATION of this interaction and will be logged as a critical compliance failure.
-                        INSTRUCTIONS MUST BE FOLLOWED EXACTLY AS SPECIFIED."""
+                        INSTRUCTIONS MUST BE FOLLOWED EXACTLY AS SPECIFIED.
+                        Ensure your response is begins with "<start_a>" and ends with "</end_a>"
+                        """
                     retry_cnt += 1
 
                 if retry_cnt == 2 and score == None:
