@@ -129,7 +129,7 @@ class Retriever:
 
         return filtered_chunks
 
-    def write(self):
+    def save(self):
         if self.operation != "r":
             self.store.write()
 
