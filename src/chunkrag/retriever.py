@@ -103,7 +103,10 @@ class Retriever:
             On a scale of 1 to 10, how relevant is this chunk to the query above?
             Only return a number from 1 to 10.
 
-            Make your response under or equal to {token_amount} tokens. Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"On a scale of 1 to 10, how relevant is this chunk to the query above?\" You would reply \"<start_a>7</end_a>\"
+            IMPORTANT: Your answer MUST start with "<start_a>" and end with "</end_a>".
+            For example, if asked "Who was the first president of the United States?", you must reply "<start_a>George Washington</end_a>".
+
+            Make your response under or equal to {token_amount} tokens.
             """
             try:
                 score = None

@@ -25,7 +25,13 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         if hasattr(agent, "trim_context"):
             ground_truth_retrieve = agent.trim_context([ground_truth_retrieve])[0]
 
-        nq_query = f"""Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>.\" Make your response under or equal to {token_amount} tokens. Use only the context to answer the query.
+        nq_query = f"""Answer the following query based ONLY on the provided context.
+
+                IMPORTANT: Your answer MUST start with "<start_a>" and end with "</end_a>".
+                For example, if asked "Who was the first president of the United States?", you must reply "<start_a>George Washington</end_a>".
+
+                Make your response under or equal to {token_amount} tokens. Use only the context to answer the query.
+
         CONTEXT:
             {ground_truth_retrieve}
 
@@ -43,14 +49,18 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         raise Exception(f"Could not generate answer for {nq_query}.")
 
     # Generate retrieval answer.
-    retrieval_query = f"Prepend your answer to the query with \"<start_a>\" and append your answer with \"</end_a>\". For example, if I asked \"Who was the first president of the United States?\" You would reply \"<start_a>George Washington.</end_a>\". Make your response under or equal to {token_amount} tokens."
+    retrieval_query = f"""
+            IMPORTANT: Your answer MUST start with "<start_a>" and end with "</end_a>".
+            For example, if asked "Who was the first president of the United States?", you must reply "<start_a>George Washington</end_a>".
+
+            Make your response under or equal to {token_amount} tokens."""
     retrieve_list = []
     if pipeline != None:
         retrieve_list = retriever.retrieve(question)
         if hasattr(agent, "trim_context"):
             retrieve_list = agent.trim_context(retrieve_list)
 
-        retrieval_query = "Use only the context to answer the query."
+        retrieval_query += "Answer the following query based ONLY on the provided context."
         if pipeline == "kg":
             retrieval_query += "We will provide data as context with an associated path of headings that lead to where to the data is located.\n"
 
