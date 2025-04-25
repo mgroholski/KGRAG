@@ -137,7 +137,7 @@ class StoreTree:
             max_heap = [(0.0, "", self.root, [])]
             return_list = []
 
-            gamma = 0.8
+            gamma = 0.9
             scoring_function = lambda a : (-(sum([((gamma ** (len(new_score_list) - 1 - idx)) * i) for idx, i in enumerate(new_score_list)]) / sum([(gamma ** (len(new_score_list) - 1 - idx)) for idx in range(len(new_score_list))])))
             while max_heap and len(return_list) < k:
                 avg_ip, nl_path, u, ip_list = heapq.heappop(max_heap)
