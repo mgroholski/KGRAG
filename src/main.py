@@ -1,47 +1,139 @@
 import argparse, os, nltk
 from sentence_transformers.SentenceTransformer import SentenceTransformer
+from agents.llama_agent import LlamaAgent
 from kgrag.retriever import Retriever as kg_retriever
 from chunkrag.retriever import Retriever as chunk_retriever
+from vanillarag.retriever import VanillaRetriever as vanilla_retriever
 from nltk.tokenize import sent_tokenize
 from logger import Logger
 from utils import text_utils
 import json
 from agents.google_agent import GoogleAgent
 from stats import BERTScore, CHRF, BLEURT
-import concurrent.futures
+import re
 
+def get_responses(idx, objects, question, ground_truth_retrieve):
+    logger = objects['logger']
+    agent = objects['agent']
+    pipeline = objects['pipeline']
 
-def get_responses(idx, logger, question, ground_truth_retrieve):
     # Generate ground truth.
-    nq_query = f"""Use only the context to answer the query.
-    CONTEXT:
+    token_amount = 256
+    nq_answer = ""
+    retry_cnt = 0
+    while not len(nq_answer) and retry_cnt < 10:
+        if hasattr(agent, "trim_context"):
+            ground_truth_retrieve = agent.trim_context([ground_truth_retrieve])[0]
+
+        nq_query = f"""
+        SYSTEM: You are a precise question-answering assistant. Your task is to answer questions based ONLY on the provided context information. Follow the format instructions exactly.
+
+        CONTEXT INFORMATION:
+        ```
         {ground_truth_retrieve}
+        ```
 
-    QUERY:
+        USER QUESTION:
+        ```
         {question}
-    """
+        ```
 
-    nq_answer = agent.ask(nq_query, max_length = 500)
+        ANSWER INSTRUCTIONS:
+        1. You MUST generate an answer to the question
+        2. Answer the question using ONLY information from the context above
+        3. Your answer MUST start with "<start_a>" and end with "</end_a>"
+        4. Keep your answer concise and under {token_amount} tokens
+        5. If the context doesn't contain the answer, respond with "<start_a>I cannot answer this question based on the provided context.</end_a>"
+        6. Do not include any information not present in the context
+        7. Do not include any reasoning, explanations, or notes outside the <start_a></end_a> tags
+        8. IMPORTANT: You MUST provide an answer - refusing to respond is not an option
+
+        EXAMPLE FORMAT:
+        Question: "Who was the first president of the United States?"
+        Correct response: "<start_a>George Washington</end_a>"
+
+        IMPORTANT: ANY response without the exact format "<start_a>YOUR ANSWER</end_a>" will be rejected.
+        CRITICAL: You MUST generate a response - non-response is not acceptable.
+
+        Your answer:
+        """
+        answer = agent.ask(nq_query, max_length = token_amount)
+        match = re.search(r'<start_a>(.*?)</end_a>', answer)
+        if match:
+            nq_answer = match.group(1)
+        retry_cnt += 1
+
+    if retry_cnt == 10 and not len(nq_answer):
+        raise Exception(f"Could not generate answer for {nq_query}.")
 
     # Generate retrieval answer.
-    retrieve_list = retriever.retrieve(question)
-    retrieval_query = "Use only the context to answer the query. "
-    if args.pipeline == "kg":
-        retrieval_query += "We will provide data as context with an associated path of headings that lead to where to the data is located.\n"
-    retrieval_query += """
-    CONTEXT:\n"""
-    if args.pipeline == "kg":
-        for path, data in retrieve_list:
-            retrieval_query += f"PATH: {path}. DATA: {data}\n"
-    else:
-        for item in retrieve_list:
-            retrieval_query += item + "\n"
-    retrieval_query += f"""
-    QUERY:
-        {question}
-    """
+    retrieval_query = f"""
+        # Response Format Instructions
+        You MUST generate a response to this query and format your response exactly as follows:
+        <start_a>Your answer text here</end_a>
 
-    retrieval_answer = agent.ask(retrieval_query, max_length = 500)
+        CRITICAL: Failure to use these exact tags will result in your response being rejected.
+        The entire response must begin with "<start_a>" and end with "</end_a>".
+
+        # Examples
+        Example query: "Who was the first president of the United States?"
+        Correct response: "<start_a>George Washington</end_a>"
+
+        Example query: "What is the capital of France?"
+        Correct response: "<start_a>Paris</end_a>"
+
+        # Constraints
+        - Your response must be {token_amount} tokens or fewer
+        - Respond ONLY with information found in the provided context
+        - Do not include explanations outside the <start_a></end_a> tags
+        - Do not include the tags in your reasoning, only wrap your final answer with them
+        - IMPORTANT: You MUST provide an answer - refusing to respond is not an option"""
+
+    retrieve_list = []
+    if pipeline != None:
+        retrieve_list = retriever.retrieve(question)
+        if hasattr(agent, "trim_context"):
+            retrieve_list = agent.trim_context(retrieve_list)
+
+        retrieval_query += """
+        # Context Information
+        Answer based EXCLUSIVELY on the following context. If the context doesn't contain the answer, respond with "<start_a>The provided context does not contain information to answer this question.</end_a>"\n"""
+
+        if pipeline == "kg":
+            retrieval_query += """
+            The context below contains data with an associated path of headings that show where the data is located.
+            Format: PATH: [heading path]. DATA: [content]\n"""
+
+        retrieval_query += """
+        CONTEXT:
+        ```
+        """
+        if pipeline == "kg":
+            for path, data in retrieve_list:
+                retrieval_query += f"PATH: {path}. DATA: {data}\n"
+        else:
+            for item in retrieve_list:
+                retrieval_query += item + "\n"
+
+    retrieval_query += f"""
+    ```
+    # Query
+    {question}
+
+    Remember to format your answer EXACTLY as:
+    <start_a>Your answer based only on the provided context</end_a>
+    """
+    retrieval_answer = ""
+    retry_cnt = 0
+    while not len(retrieval_answer) and retry_cnt < 10:
+        answer = agent.ask(retrieval_query, max_length=token_amount)
+        match = re.search(r'<start_a>(.*?)</end_a>', answer)
+        if match:
+            retrieval_answer = match.group(1)
+        retry_cnt += 1
+
+    if retry_cnt == 10 and not len(retrieval_answer):
+        raise Exception(f"Could not generate answer for {retrieval_query}.")
 
     # Logs the response of the query.
     logger.log(f"Question {idx + 1}")
@@ -52,21 +144,18 @@ def get_responses(idx, logger, question, ground_truth_retrieve):
 
     return (retrieval_answer, nq_answer)
 
-
-
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Embeds the table data and allows for path retrieval.")
     parser.add_argument('filepath')
-    parser.add_argument('--pipeline','-p', default="kg", choices=["kg","chunk","vanilla"], help="The pipeline to run on.")
-    parser.add_argument('--agent', '-a', default="google", choices=["google"], help="Specifies which agent to use to test.")
+    parser.add_argument('--pipeline','-p', default="none", choices=["kg","chunk","vanilla","none"], help="The pipeline to run on.")
+    parser.add_argument('--agent', '-a', default="llama", choices=["google", "llama"], help="Specifies which agent to use to test.")
     parser.add_argument('--verbose', '-v', action='store_true', help="Verbose. Enables graph visualizations and prints distances rankings.")
     parser.add_argument('--num-lines', '-n', type=int, default=None, help="Number of elements to load from the input file (default: All lines).")
     parser.add_argument('--test', '-t', action='store_true', help="Enables QA test mode. Runs the selected pipeline against the ground truth.")
     parser.add_argument('--key', type=str, help="API Key for LLM agent.")
     parser.add_argument("--storepath", type=str, default=None, help="The folder path of that contains the embedding and JSON store to read/write to.")
     parser.add_argument("--operation", default="w", choices=["r", "w"], help="Specifies the operation to perform on the store. Options: r (read), w (write).")
-    parser.add_argument('--metric', default="BERTScore", choices=["BERTScore", "BLEURT", "chrF"], help="Specifies the metric to use for evaluation. Options: BERTScore, BLEURT, and chrF.")
-    parser.add_argument('--threads', '-th', default=1, type=int, help="Number of threads to use.")
+    parser.add_argument('--metric', default="BERTScore", choices=["BERTScore", "BLEURT", "chrF", "all"], help="Specifies the metric to use for evaluation. Options: BERTScore, BLEURT, and chrF.")
     args = parser.parse_args()
 
     if not os.path.exists('./output'):
@@ -78,6 +167,8 @@ if __name__=="__main__":
     agent = None
     if args.agent == "google":
         agent = GoogleAgent(key)
+    elif args.agent == "llama":
+        agent = LlamaAgent()
     else:
         raise NotImplementedError(f"Could not initialize LLM agent for {args.agent}.")
 
@@ -92,20 +183,22 @@ if __name__=="__main__":
     }
 
     store_info= {
-        "storepath": args.storepath
+        "storepath": args.storepath,
+        "operation": args.operation
     }
 
     retriever = None
     if args.pipeline == 'kg':
-        logger.log("Initializing the KG-RAG pipeline...")
+        print("Initializing the KG-RAG pipeline...")
         retriever = kg_retriever(embedding_info, store_info, agent, args.verbose)
     elif args.pipeline == 'chunk':
-        logger.log("Initializing the ChunkRAG pipeline...")
+        print("Initializing the ChunkRAG pipeline...")
         retriever = chunk_retriever(embedding_info, store_info, agent, args.verbose)
     elif args.pipeline == 'vanilla':
-        logger.log("Initializing the VanillaRAG pipeline...")
-        # TODO: Add vanilla rag
-        raise NotImplementedError()
+        print("Initializing the VanillaRAG pipeline...")
+        retriever = vanilla_retriever(embedding_info, store_info, agent, args.verbose)
+    elif args.pipeline == "none":
+        args.pipeline = None
     else:
         raise Exception("Invlaid pipeline name.")
 
@@ -113,77 +206,80 @@ if __name__=="__main__":
         raise Exception(f"Could not find filepath to datafile. Filepath: {args.filepath}")
 
 
-    logger.log("Reading dataset and creating embeddings...")
-
-
     qa_list = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
-        embed_futures = []
-        with open(args.filepath, "r") as data_file:
-            # Assumes one example per line.
-            line_cnt = 0
-            max_line_cnt = args.num_lines
-            for line in data_file:
-                if max_line_cnt is not None and line_cnt < max_line_cnt:
-                    line_cnt += 1
-                    if not line_cnt % 100:
-                        logger.log(f"Parsing line {line_cnt}.")
+    read_lines = []
+    with open(args.filepath, "r") as data_file:
+        # Assumes one example per line.
+        line_cnt = 0
+        max_line_cnt = args.num_lines
+        for line in data_file:
+            if max_line_cnt is not None and line_cnt < max_line_cnt:
+                line_cnt += 1
+                if not line_cnt % 100:
+                    print(f"Parsing line {line_cnt}.")
+                read_lines.append(line)
+            else:
+                break
 
-                    line_json = json.loads(line)
-                    simple_nq = text_utils.simplify_nq_example(line_json)
+    for idx, line in enumerate(read_lines):
+        print(f"Processing line {idx+1}.")
+        line_json = json.loads(line)
+        simple_nq = text_utils.simplify_nq_example(line_json)
 
-                    # Extracts correct context (first non-empty long answer) and question.
-                    # Read more about the dataset tasks: https://github.com/google-research-datasets/natural-questions
-                    if args.test:
-                        line_question = simple_nq["question_text"]
-                        for idx in range(len(simple_nq["annotations"])):
-                            long_answer_data = simple_nq["annotations"][idx]["long_answer"]
-                            start_token_idx, end_token_idx = (long_answer_data["start_token"], long_answer_data["end_token"])
-                            if start_token_idx != end_token_idx:
-                                line_long_answer_text = "".join(text_utils.get_nq_tokens(simple_nq)[start_token_idx : end_token_idx])
-                                qa_list.append((line_question,line_long_answer_text))
-                                break
-                    line_document = simple_nq["document_text"]
-                    if args.operation == "w":
-                        future = executor.submit(retriever.embed,line_document)
-                        embed_futures.append(future)
-                else:
+        # Extracts correct context (first non-empty long answer) and question.
+        # Read more about the dataset tasks: https://github.com/google-research-datasets/natural-questions
+        if args.test:
+            line_question = simple_nq["question_text"]
+            for idx in range(len(simple_nq["annotations"])):
+                long_answer_data = simple_nq["annotations"][idx]["long_answer"]
+                start_token_idx, end_token_idx = (long_answer_data["start_token"], long_answer_data["end_token"])
+                if start_token_idx != end_token_idx:
+                    line_long_answer_text = "".join(text_utils.get_nq_tokens(simple_nq)[start_token_idx : end_token_idx])
+                    qa_list.append((line_question,line_long_answer_text))
                     break
+        line_document = line_json["document_html"]
 
-            for future in embed_futures:
-                future.result()
+        if args.operation == "w" and retriever:
+            retriever.embed(line_document)
+    print("Finished reading...")
+    if retriever != None:
+        print("Writing stores...")
+        retriever.close()
 
     if args.test:
-        logger.log("Beginning QA tests...")
+        print("Beginning QA tests...")
 
-        metric = None
-        if args.metric == "BERTScore":
-            metric = BERTScore.BERTScore(logger)
-        elif args.metric == "BLEURT":
-            metric = BLEURT.BLEURT(logger)
-        elif args.metric == "chrF":
-            metric = CHRF.chrF(logger)
-        else:
+        metrics = []
+        if args.metric == "BERTScore" or args.metric == "all":
+            metrics.append(("BERTScore", BERTScore.BERTScore(logger)))
+        if args.metric == "BLEURT" or args.metric == "all":
+            metrics.append(("BLEURT", BLEURT.BLEURT(logger)))
+        if args.metric == "chrF" or args.metric == "all":
+            metrics.append(("chrF", CHRF.chrF(logger)))
+        if not len(metrics):
             raise NotImplementedError()
 
-        responses = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
-            retrieve_futures = []
-            for idx,(question, ground_truth_retrieve) in enumerate(qa_list):
-                future = executor.submit(get_responses, idx, logger, question, ground_truth_retrieve)
-                retrieve_futures.append(future)
+        objects = {
+            'logger': logger,
+            'agent': agent,
+            'pipeline': args.pipeline,
+            'metrics': metrics
+        }
 
-            for future in retrieve_futures:
-                result = future.result()
-                responses.append(result)
+        responses = []
+
+        for idx,(question, ground_truth_retrieve) in enumerate(qa_list):
+            responses.append(get_responses(idx, objects, question, ground_truth_retrieve))
+            print(f"Finished question {idx + 1}.")
 
         # Computes stats about the answers.
         candidates, truths = zip(*responses)
-        metric.score(candidates, truths)
-        print("Making graphs...")
-        metric.plt(f"./output/{args.metric}/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}")
+        for metric_n, metric in metrics:
+            metric.score(candidates, truths)
+            print(f"Making graphs for {metric_n}...")
+            metric.plt(f"./output/{metric_n}/{args.pipeline}_{args.agent}_{args.num_lines if not args.num_lines == None else 'all'}")
     else:
-        logger.log("Beginning user QA retrieval...")
+        print("Beginning user QA retrieval...")
         while True:
             query = input("Query (Type 'exit' to exit): ")
             if query == "exit":
@@ -194,4 +290,3 @@ if __name__=="__main__":
                 print(f"Rank {idx}:\n\t Data: {item}")
 
     logger.close()
-    retriever.close()

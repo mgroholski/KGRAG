@@ -2,6 +2,9 @@ import google.generativeai as genai
 
 class GoogleAgent:
     def __init__(self, apikey):
+        if not apikey:
+            raise Exception("Cannot intialize Google agent without API key.")
+
         self.ky = apikey
         genai.configure(api_key=self.ky)
         self.model = genai.GenerativeModel('models/gemini-2.0-flash')
@@ -24,7 +27,7 @@ class GoogleAgent:
                 # Note: This is an approximate conversion as tokens ≈ 4 characters
                 # We divide by 4 to convert characters to approximate token count
                 estimated_tokens = max(1, int(max_length / 4))
-                generation_config = genai.GenerationConfig(max_output_tokens=estimated_tokens)
+                generation_config = genai.GenerationConfig(max_output_tokens=estimated_tokens, temperature=0.4, top_p=0.7)
 
             response = self.model.generate_content(
                 query,

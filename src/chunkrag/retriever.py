@@ -2,6 +2,7 @@ from utils.store_utils import Store
 import numpy as np
 from rank_bm25 import BM25Okapi
 from nltk.tokenize import word_tokenize
+import re
 
 class Retriever:
     def __init__(self, embedding_dict, store_dict, agent, verbose=False):
@@ -13,11 +14,13 @@ class Retriever:
             raise Exception("Could not read embedding dictionary information. Please format correctly.")
 
         if "storepath" in store_dict:
-            self.store = Store(self.model_dim, store_dict["storepath"], verbose)
+            self.operation = store_dict["operation"]
+            self.store = Store(self.model_dim, store_dict["storepath"], self.operation,verbose)
         else:
             raise Exception("Could not read store dictionary information. Please format correctly.")
 
         self.agent = agent
+        self.verbose = verbose
 
         # Set up BM25 only if metadata exists
         self.all_chunks = self.store.metadata
@@ -29,6 +32,8 @@ class Retriever:
             self.bm25_model = None  # Delay initialization until retrieve()
 
     def embed(self, corpus):
+        if self.operation == "r":
+            return
         def cosine_similarity(vec1, vec2):
             dot_product = np.dot(vec1, vec2)
             norm1 = np.linalg.norm(vec1)
@@ -85,18 +90,48 @@ class Retriever:
                 seen.add(chunk)
 
         # LLM-based relevance filtering
+        token_amount = 128
         filtered_chunks = []
         for chunk in combined:
-            prompt = f"""
-Query: {query}
-Chunk: {chunk}
+            if hasattr(self.agent, "trim_context"):
+                chunk = self.agent.trim_context([chunk])[0]
 
-On a scale of 1 to 10, how relevant is this chunk to the query above?
-Only return a number from 1 to 10.
-"""
+            prompt = f"""
+            SYSTEM: You are a helpful and precise assistant. Your task is to rate the relevance of information chunks to user queries on a scale of 1-10. You MUST follow the format instructions exactly and MUST provide a rating.
+            USER QUERY: ```{query}```
+            INFORMATION CHUNK: ```{chunk}```
+            INSTRUCTIONS:
+            1. You MUST generate a numerical rating response
+            2. Rate how relevant this information chunk is to the user query on a scale from 1 to 10
+                - 1 = Completely irrelevant
+                - 5 = Somewhat relevant
+                - 10 = Extremely relevant, directly answers the query
+            3. ONLY provide a single number from 1-10
+            4. Your response MUST begin with "<start_a>" and end with "</end_a>"
+            5. DO NOT include any explanations, reasoning, or additional text
+            6. IMPORTANT: You MUST provide a rating - refusing to respond is not an option
+            CORRECT RESPONSE EXAMPLES:
+            "<start_a>7</end_a>"
+            "<start_a>3</end_a>"
+            "<start_a>10</end_a>"
+            IMPORTANT: ANY response without the exact format "<start_a>NUMBER</end_a>" will be considered invalid.
+            CRITICAL: You MUST generate a rating response - non-response is not acceptable.
+            Your rating (1-10):
+            """
+
             try:
-                response = self.agent.ask(prompt, max_length=10)
-                score = int(''.join(filter(str.isdigit, response)))
+                score = None
+                retry_cnt = 0
+                while score == None and retry_cnt < 10:
+                    response = self.agent.ask(prompt, max_length=token_amount)
+                    match = re.search(r'<start_a>(.*?)</end_a>', response)
+                    if match:
+                        score = int(match.group(1))
+                    retry_cnt += 1
+
+                if retry_cnt == 10 and score == None:
+                    raise Exception(f"Could not get good LLM output format for {prompt}.")
+
                 if score >= 6:
                     filtered_chunks.append(chunk)
             except Exception as e:
@@ -106,7 +141,8 @@ Only return a number from 1 to 10.
         return filtered_chunks
 
     def close(self):
-        self.store.close()
+        if self.operation != "r":
+            self.store.save()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        self.write()
