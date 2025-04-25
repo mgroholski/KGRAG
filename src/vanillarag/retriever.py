@@ -10,7 +10,8 @@ class VanillaRetriever:
             raise Exception("Could not read embedding dictionary information. Please format correctly.")
 
         if "storepath" in store_dict:
-            self.store = Store(self.model_dim, store_dict["storepath"], verbose)
+            self.operation = store_dict["operation"]
+            self.store = StoreTree(self.model_dim, store_dict["storepath"], self.operation, verbose)
         else:
             raise Exception("Could not read store dictionary information. Please format correctly.")
 
@@ -49,7 +50,8 @@ class VanillaRetriever:
         return retrieve_obj_list
 
     def close(self):
-        self.store.close()
+        if self.operation != "r":
+            self.store.save()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()

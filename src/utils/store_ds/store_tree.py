@@ -198,7 +198,7 @@ class StoreTree:
     def range_query(self, q_embeddings, threshold=0.1):
         raise NotImplementedError()
 
-    def close(self):
+    def save(self):
         if self.folder_path:
             if not os.path.exists(self.folder_path):
                 os.makedirs(self.folder_path)
