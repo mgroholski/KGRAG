@@ -221,8 +221,7 @@ class StoreTree:
                 # If using GPU, convert index back to CPU before saving
                 index_to_save = node.index
                 if node.use_gpu:
-                    gpu_index = node.index
-                    index_to_save = faiss.extract_index_ivf(gpu_index).index
+                    index_to_save = faiss.index_gpu_to_cpu(node.index)
 
                 faiss.write_index(index_to_save, node_index_path)
                 for i, (title, child_node) in enumerate(node.adj_dict.items()):

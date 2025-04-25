@@ -197,7 +197,7 @@ if __name__=="__main__":
             retriever.embed(line_document)
     print("Finished reading...")
     if retriever != None:
-        retriever.write()
+        retriever.close()
 
     if args.test:
         print("Beginning QA tests...")

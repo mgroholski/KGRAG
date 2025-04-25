@@ -78,13 +78,16 @@ class Store:
             if not os.path.exists(self.folder_path):
                 os.makedirs(self.folder_path)
 
-            index_to_save = self.index
+            # Handle GPU index differently
             if self.use_gpu:
-                gpu_index = self.index
-                index_to_save = faiss.extract_index_ivf(gpu_index).index
-
-            faiss_path = os.path.join(self.folder_path, "embeddings.index")
-            faiss.write_index(index_to_save, faiss_path)
+                # Create a CPU version of the index for saving
+                cpu_index = faiss.index_gpu_to_cpu(self.index)
+                faiss_path = os.path.join(self.folder_path, "embeddings.index")
+                faiss.write_index(cpu_index, faiss_path)
+            else:
+                # For CPU index, save directly
+                faiss_path = os.path.join(self.folder_path, "embeddings.index")
+                faiss.write_index(self.index, faiss_path)
 
             metadata_path = os.path.join(self.folder_path, "metadata.json")
             with open(metadata_path, "w") as write_file:
