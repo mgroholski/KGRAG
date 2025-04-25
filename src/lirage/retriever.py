@@ -15,8 +15,8 @@ class LIRAGERetriever:
         self.reader = AutoModelForSeq2SeqLM.from_pretrained("microsoft/tapex-large").to(self.device).eval()
         self.read_tokenizer = AutoTokenizer.from_pretrained("microsoft/tapex-large")
 
-
         self.store = Store(embedding_info['model_dim'], store_info["storepath"], verbose)
+        self.operation = store_info["operation"]
         self.tables = []
         self.table_embs = []
 

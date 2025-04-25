@@ -100,7 +100,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     retrieve_list = []
     if pipeline != None:
         retrieve_list = retriever.retrieve(question)
-        if hasattr(agent, "trim_context"):
+        if hasattr(agent, "trim_context") and pipeline != "kg":
             retrieve_list = agent.trim_context(retrieve_list)
 
         retrieval_query += """
@@ -119,6 +119,8 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         ```
         """
         if pipeline == "kg":
+            print(retrieve_list)
+            exit()
             for path, data in retrieve_list:
                 retrieval_query += f"PATH: {path}. DATA: {data}\n"
         else:
