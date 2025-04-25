@@ -133,7 +133,7 @@ class Retriever:
                         THIS IS YOUR FINAL WARNING.
                         Failure to follow instructions precisely in your next response will result in IMMEDIATE TERMINATION of this interaction and will be logged as a critical compliance failure.
                         INSTRUCTIONS MUST BE FOLLOWED EXACTLY AS SPECIFIED.
-                        Ensure your response is begins with "<rating>" and ends with "</rating>"
+                        Ensure your response begins with "<rating>" and ends with "</rating>"
                         """
                     retry_cnt += 1
 
