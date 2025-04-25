@@ -76,16 +76,12 @@ class Store:
     def _move_index_to_gpu(self):
         """Move the FAISS index to GPU if available."""
         try:
-            # Check if we have faiss-gpu installed
             if hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0:
-                if self.verbose:
-                    print(f"Moving index to GPU. {faiss.get_num_gpus()} GPU(s) available.")
-                # Use the first GPU
+                print(f"Moving index to GPU. {faiss.get_num_gpus()} GPU(s) available.")
                 res = faiss.StandardGpuResources()
                 self.index = faiss.index_cpu_to_gpu(res, 0, self.index)
             else:
-                if self.verbose:
-                    print("No GPU capability detected in FAISS. Using CPU index.")
+                print("No GPU capability detected in FAISS. Using CPU index.")
                 self.use_gpu = False
         except Exception as e:
             print(f"Error moving index to GPU: {e}. Using CPU index.")
