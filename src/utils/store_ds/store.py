@@ -91,7 +91,7 @@ class Store:
             print(f"Error moving index to GPU: {e}. Using CPU index.")
             self.use_gpu = False
 
-    def close(self):
+    def save(self):
         if self.folder_path:
             if not os.path.exists(self.folder_path):
                 os.makedirs(self.folder_path)
@@ -107,7 +107,7 @@ class Store:
             print("No write path provided...")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        self.save()
 
     @staticmethod
     def normalize_vector(v):
