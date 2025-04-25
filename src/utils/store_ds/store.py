@@ -73,21 +73,32 @@ class Store:
 
         return retrieve_chunks
 
-    def save(self):
+    def _move_index_to_gpu(self):
+        """Move the FAISS index to GPU if available."""
+        try:
+            # Check if we have faiss-gpu installed
+            if hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0:
+                if self.verbose:
+                    print(f"Moving index to GPU. {faiss.get_num_gpus()} GPU(s) available.")
+                # Use the first GPU
+                res = faiss.StandardGpuResources()
+                self.index = faiss.index_cpu_to_gpu(res, 0, self.index)
+            else:
+                if self.verbose:
+                    print("No GPU capability detected in FAISS. Using CPU index.")
+                self.use_gpu = False
+        except Exception as e:
+            print(f"Error moving index to GPU: {e}. Using CPU index.")
+            self.use_gpu = False
+
+    def close(self):
         if self.folder_path:
             if not os.path.exists(self.folder_path):
                 os.makedirs(self.folder_path)
 
-            # Handle GPU index differently
-            if self.use_gpu:
-                # Create a CPU version of the index for saving
-                cpu_index = faiss.index_gpu_to_cpu(self.index)
-                faiss_path = os.path.join(self.folder_path, "embeddings.index")
-                faiss.write_index(cpu_index, faiss_path)
-            else:
-                # For CPU index, save directly
-                faiss_path = os.path.join(self.folder_path, "embeddings.index")
-                faiss.write_index(self.index, faiss_path)
+            # For CPU-only FAISS, no conversion is needed
+            faiss_path = os.path.join(self.folder_path, "embeddings.index")
+            faiss.write_index(self.index, faiss_path)
 
             metadata_path = os.path.join(self.folder_path, "metadata.json")
             with open(metadata_path, "w") as write_file:
@@ -102,22 +113,3 @@ class Store:
     def normalize_vector(v):
         norm = np.linalg.norm(v)
         return v if norm == 0 else v / norm
-
-    def _move_index_to_gpu(self):
-        """Move the FAISS index to GPU if available."""
-        try:
-            # Get number of available GPUs
-            ngpus = faiss.get_num_gpus()
-            if ngpus > 0:
-                if self.verbose:
-                    print(f"Moving index to GPU. {ngpus} GPU(s) available.")
-
-                # Use the first GPU
-                res = faiss.StandardGpuResources()
-                self.index = faiss.index_cpu_to_gpu(res, 0, self.index)
-            else:
-                if self.verbose:
-                    print("No GPUs detected by FAISS. Using CPU index.")
-        except Exception as e:
-            print(f"Error moving index to GPU: {e}. Using CPU index.")
-            self.use_gpu = False

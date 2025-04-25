@@ -198,7 +198,21 @@ class StoreTree:
     def range_query(self, q_embeddings, threshold=0.1):
         raise NotImplementedError()
 
-    def save(self):
+    def _move_index_to_gpu(self):
+        """Move the FAISS index to GPU if available."""
+        try:
+            # Check if we have faiss-gpu installed
+            if hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0:
+                # Use the first GPU
+                res = faiss.StandardGpuResources()
+                self.index = faiss.index_cpu_to_gpu(res, 0, self.index)
+            else:
+                self.use_gpu = False
+        except Exception as e:
+            print(f"Error moving index to GPU: {e}. Using CPU index.")
+            self.use_gpu = False
+
+    def close(self):
         if self.folder_path:
             if not os.path.exists(self.folder_path):
                 os.makedirs(self.folder_path)
@@ -218,12 +232,8 @@ class StoreTree:
                 }
 
                 node_index_path = os.path.join(self.folder_path, f"node_{node_id}.index")
-                # If using GPU, convert index back to CPU before saving
-                index_to_save = node.index
-                if node.use_gpu:
-                    index_to_save = faiss.index_gpu_to_cpu(node.index)
+                faiss.write_index(node.index, node_index_path)
 
-                faiss.write_index(index_to_save, node_index_path)
                 for i, (title, child_node) in enumerate(node.adj_dict.items()):
                     child_id = f"{node_id}_{i}"
                     node_data["children"].append({
