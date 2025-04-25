@@ -1,14 +1,12 @@
 import json
 import faiss
-import torch
 import os
 import numpy as np
 
 class Store:
-    def __init__(self, dim, path=None, read=False, verbose=False, use_gpu=True):
+    def __init__(self, dim, path=None, read=False, verbose=False):
         self.folder_path = path
         self.verbose = verbose
-        self.use_gpu = use_gpu and torch.cuda.is_available()
 
         if (read == "r" and path != None and os.path.exists(path)
         and os.path.exists(os.path.join(path, "embeddings.index"))
@@ -22,10 +20,6 @@ class Store:
             print("Either did not provide a path or could not find the correct files... Creating new store files.")
             self.index = faiss.IndexFlatIP(dim)
             self.metadata = []
-
-        # Move index to GPU if available and requested
-        if self.use_gpu:
-            self._move_index_to_gpu()
 
     def write(self, embedding, data):
         self.index.add(embedding)
@@ -73,26 +67,11 @@ class Store:
 
         return retrieve_chunks
 
-    def _move_index_to_gpu(self):
-        """Move the FAISS index to GPU if available."""
-        try:
-            if hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0:
-                print(f"Moving index to GPU. {faiss.get_num_gpus()} GPU(s) available.")
-                res = faiss.StandardGpuResources()
-                self.index = faiss.index_cpu_to_gpu(res, 0, self.index)
-            else:
-                print("No GPU capability detected in FAISS. Using CPU index.")
-                self.use_gpu = False
-        except Exception as e:
-            print(f"Error moving index to GPU: {e}. Using CPU index.")
-            self.use_gpu = False
-
     def save(self):
         if self.folder_path:
             if not os.path.exists(self.folder_path):
                 os.makedirs(self.folder_path)
 
-            # For CPU-only FAISS, no conversion is needed
             faiss_path = os.path.join(self.folder_path, "embeddings.index")
             faiss.write_index(self.index, faiss_path)
 
