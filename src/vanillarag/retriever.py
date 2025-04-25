@@ -19,7 +19,6 @@ class VanillaRetriever:
         self.verbose = verbose
 
     def embed(self, corpus):
-
         corpus_sentences = self.tokenizer(corpus, language="english")
 
         chunks = []

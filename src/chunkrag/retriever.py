@@ -127,6 +127,12 @@ class Retriever:
                     match = re.search(r'<start_a>(.*?)</end_a>', response)
                     if match:
                         score = int(match.group(1))
+                    elif not retry_cnt:
+                        prompt += """⚠️ CRITICAL INSTRUCTION FAILURE ⚠️
+                        The previous response COMPLETELY IGNORED the explicitly provided instructions.
+                        THIS IS YOUR FINAL WARNING.
+                        Failure to follow instructions precisely in your next response will result in IMMEDIATE TERMINATION of this interaction and will be logged as a critical compliance failure.
+                        INSTRUCTIONS MUST BE FOLLOWED EXACTLY AS SPECIFIED."""
                     retry_cnt += 1
 
                 if retry_cnt == 10 and score == None:

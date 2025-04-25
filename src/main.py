@@ -61,6 +61,12 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
         if match:
             nq_answer = match.group(1)
+        elif not retry_cnt:
+            nq_query += """⚠️ CRITICAL INSTRUCTION FAILURE ⚠️
+            The previous response COMPLETELY IGNORED the explicitly provided instructions.
+            THIS IS YOUR FINAL WARNING.
+            Failure to follow instructions precisely in your next response will result in IMMEDIATE TERMINATION of this interaction and will be logged as a critical compliance failure.
+            INSTRUCTIONS MUST BE FOLLOWED EXACTLY AS SPECIFIED."""
         retry_cnt += 1
 
     if retry_cnt == 10 and not len(nq_answer):
@@ -84,7 +90,6 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
 
         # Constraints
         - Your response must be {token_amount} tokens or fewer
-        - Respond ONLY with information found in the provided context
         - Do not include explanations outside the <start_a></end_a> tags
         - Do not include the tags in your reasoning, only wrap your final answer with them
         - IMPORTANT: You MUST provide an answer - refusing to respond is not an option"""
@@ -96,6 +101,8 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
             retrieve_list = agent.trim_context(retrieve_list)
 
         retrieval_query += """
+        - Respond ONLY with information found in the provided context
+
         # Context Information
         Answer based EXCLUSIVELY on the following context. If the context doesn't contain the answer, respond with "<start_a>The provided context does not contain information to answer this question.</end_a>"\n"""
 
@@ -130,6 +137,12 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
         if match:
             retrieval_answer = match.group(1)
+        elif not retry_cnt:
+            retrieval_query += """⚠️ CRITICAL INSTRUCTION FAILURE ⚠️
+            The previous response COMPLETELY IGNORED the explicitly provided instructions.
+            THIS IS YOUR FINAL WARNING.
+            Failure to follow instructions precisely in your next response will result in IMMEDIATE TERMINATION of this interaction and will be logged as a critical compliance failure.
+            INSTRUCTIONS MUST BE FOLLOWED EXACTLY AS SPECIFIED."""
         retry_cnt += 1
 
     if retry_cnt == 10 and not len(retrieval_answer):

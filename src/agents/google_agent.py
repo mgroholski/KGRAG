@@ -24,20 +24,13 @@ class GoogleAgent:
         try:
             generation_config = None
             if max_length is not None:
-                # Note: This is an approximate conversion as tokens ≈ 4 characters
-                # We divide by 4 to convert characters to approximate token count
-                estimated_tokens = max(1, int(max_length / 4))
-                generation_config = genai.GenerationConfig(max_output_tokens=estimated_tokens, temperature=0.4, top_p=0.7)
+                max_length = 256
+            generation_config = genai.GenerationConfig(max_output_tokens=max_length, temperature=0.4, top_p=0.7)
 
             response = self.model.generate_content(
                 query,
                 generation_config=generation_config
             )
-
-            response_text = response.text
-            if max_length is not None and len(response_text) > max_length:
-                response_text = response_text[:max_length]
-
-            return response_text
+            return response.text
         except Exception as e:
             return f"Error querying Gemini: {str(e)}"
