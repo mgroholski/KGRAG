@@ -21,7 +21,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     token_amount = 256
     nq_answer = ""
     retry_cnt = 0
-    while not len(nq_answer) and retry_cnt < 10:
+    while not len(nq_answer) and retry_cnt < 2:
         if hasattr(agent, "trim_context"):
             ground_truth_retrieve = agent.trim_context([ground_truth_retrieve])[0]
 
@@ -69,7 +69,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
             INSTRUCTIONS MUST BE FOLLOWED EXACTLY AS SPECIFIED."""
         retry_cnt += 1
 
-    if retry_cnt == 10 and not len(nq_answer):
+    if retry_cnt == 2 and not len(nq_answer):
         raise Exception(f"Could not generate answer for {nq_query}.")
 
     # Generate retrieval answer.
@@ -132,7 +132,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     """
     retrieval_answer = ""
     retry_cnt = 0
-    while not len(retrieval_answer) and retry_cnt < 10:
+    while not len(retrieval_answer) and retry_cnt < 2:
         answer = agent.ask(retrieval_query, max_length=token_amount)
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
         if match:
@@ -145,7 +145,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
             INSTRUCTIONS MUST BE FOLLOWED EXACTLY AS SPECIFIED."""
         retry_cnt += 1
 
-    if retry_cnt == 10 and not len(retrieval_answer):
+    if retry_cnt == 2 and not len(retrieval_answer):
         raise Exception(f"Could not generate answer for {retrieval_query}.")
 
     # Logs the response of the query.
@@ -218,7 +218,6 @@ if __name__=="__main__":
     if not os.path.exists(args.filepath):
         raise Exception(f"Could not find filepath to datafile. Filepath: {args.filepath}")
 
-
     qa_list = []
     read_lines = []
     with open(args.filepath, "r") as data_file:
@@ -255,7 +254,7 @@ if __name__=="__main__":
         if args.operation == "w" and retriever:
             retriever.embed(line_document)
     print("Finished reading...")
-    if retriever != None:
+    if retriever != None and store_info["operation"]=="w":
         print("Writing stores...")
         retriever.close()
 
