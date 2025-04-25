@@ -18,6 +18,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     logger = objects['logger']
     agent = objects['agent']
     pipeline = objects['pipeline']
+    retriever = objects['retriever']
 
     # Generate ground truth.
     token_amount = 256
@@ -163,7 +164,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Embeds the table data and allows for path retrieval.")
     parser.add_argument('filepath')
-    parser.add_argument('--pipeline','-p', default="none", choices=["kg","chunk","vanilla","none", "trag","lirage"], help="The pipeline to run on.")
+    parser.add_argument('--pipeline','-p', default="none", choices=["kg","chunk","vanilla","none","trag","lirage"], help="The pipeline to run on.")
     parser.add_argument('--agent', '-a', default="llama", choices=["google", "llama"], help="Specifies which agent to use to test.")
     parser.add_argument('--verbose', '-v', action='store_true', help="Verbose. Enables graph visualizations and prints distances rankings.")
     parser.add_argument('--num-lines', '-n', type=int, default=None, help="Number of elements to load from the input file (default: All lines).")
@@ -216,9 +217,11 @@ if __name__=="__main__":
     elif args.pipeline == "none":
         args.pipeline = None
     elif args.pipeline == "trag":
-        args.pipeline == trag_retriever(embedding_info, store_info, agent, args.verbose)
+        print("Initializing the TRAG pipeline...")
+        retriever = trag_retriever(embedding_info, store_info, agent, args.verbose)
     elif args.pipeline == "lirage":
-            args.pipeline == li_retriever(embedding_info, store_info, agent, args.verbose)
+        print("Initializing the LIRAGE pipeline...")
+        retriever = li_retriever(embedding_info, store_info, agent, args.verbose)
     else:
         raise Exception("Invlaid pipeline name.")
 
@@ -261,6 +264,8 @@ if __name__=="__main__":
         if args.operation == "w" and retriever:
             retriever.embed(line_document)
     print("Finished reading...")
+
+
     if retriever != None and store_info["operation"]=="w":
         print("Writing stores...")
         retriever.close()
@@ -282,7 +287,8 @@ if __name__=="__main__":
             'logger': logger,
             'agent': agent,
             'pipeline': args.pipeline,
-            'metrics': metrics
+            'metrics': metrics,
+            'retriever': retriever
         }
 
         responses = []
