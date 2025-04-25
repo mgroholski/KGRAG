@@ -31,6 +31,7 @@ class GoogleAgent:
                 query,
                 generation_config=generation_config
             )
-            return response.text
+            answer_text = response.text
+            return answer_text
         except Exception as e:
             return f"Error querying Gemini: {str(e)}"
