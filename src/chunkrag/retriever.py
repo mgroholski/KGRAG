@@ -97,27 +97,25 @@ class Retriever:
                 chunk = self.agent.trim_context([chunk])[0]
 
             prompt = f"""
-            SYSTEM: You are a helpful and precise assistant. Your task is to rate the relevance of information chunks to user queries on a scale of 1-10. You MUST follow the format instructions exactly.
-
-            USER QUERY: {query}
-            INFORMATION CHUNK: {chunk}
-
+            SYSTEM: You are a helpful and precise assistant. Your task is to rate the relevance of information chunks to user queries on a scale of 1-10. You MUST follow the format instructions exactly and MUST provide a rating.
+            USER QUERY: ```{query}```
+            INFORMATION CHUNK: ```{chunk}```
             INSTRUCTIONS:
-            1. Rate how relevant this information chunk is to the user query on a scale from 1 to 10
-               - 1 = Completely irrelevant
-               - 5 = Somewhat relevant
-               - 10 = Extremely relevant, directly answers the query
-            2. ONLY provide a single number from 1-10
-            3. Your response MUST begin with "<start_a>" and end with "</end_a>"
-            4. DO NOT include any explanations, reasoning, or additional text
-
+            1. You MUST generate a numerical rating response
+            2. Rate how relevant this information chunk is to the user query on a scale from 1 to 10
+                - 1 = Completely irrelevant
+                - 5 = Somewhat relevant
+                - 10 = Extremely relevant, directly answers the query
+            3. ONLY provide a single number from 1-10
+            4. Your response MUST begin with "<start_a>" and end with "</end_a>"
+            5. DO NOT include any explanations, reasoning, or additional text
+            6. IMPORTANT: You MUST provide a rating - refusing to respond is not an option
             CORRECT RESPONSE EXAMPLES:
             "<start_a>7</end_a>"
             "<start_a>3</end_a>"
             "<start_a>10</end_a>"
-
             IMPORTANT: ANY response without the exact format "<start_a>NUMBER</end_a>" will be considered invalid.
-
+            CRITICAL: You MUST generate a rating response - non-response is not acceptable.
             Your rating (1-10):
             """
 

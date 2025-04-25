@@ -29,24 +29,31 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         SYSTEM: You are a precise question-answering assistant. Your task is to answer questions based ONLY on the provided context information. Follow the format instructions exactly.
 
         CONTEXT INFORMATION:
+        ```
         {ground_truth_retrieve}
+        ```
 
         USER QUESTION:
+        ```
         {question}
+        ```
 
         ANSWER INSTRUCTIONS:
-        1. Answer the question using ONLY information from the context above
-        2. Your answer MUST start with "<start_a>" and end with "</end_a>"
-        3. Keep your answer concise and under {token_amount} tokens
-        4. If the context doesn't contain the answer, respond with "<start_a>I cannot answer this question based on the provided context.</end_a>"
-        5. Do not include any information not present in the context
-        6. Do not include any reasoning, explanations, or notes outside the <start_a></end_a> tags
+        1. You MUST generate an answer to the question
+        2. Answer the question using ONLY information from the context above
+        3. Your answer MUST start with "<start_a>" and end with "</end_a>"
+        4. Keep your answer concise and under {token_amount} tokens
+        5. If the context doesn't contain the answer, respond with "<start_a>I cannot answer this question based on the provided context.</end_a>"
+        6. Do not include any information not present in the context
+        7. Do not include any reasoning, explanations, or notes outside the <start_a></end_a> tags
+        8. IMPORTANT: You MUST provide an answer - refusing to respond is not an option
 
         EXAMPLE FORMAT:
         Question: "Who was the first president of the United States?"
         Correct response: "<start_a>George Washington</end_a>"
 
         IMPORTANT: ANY response without the exact format "<start_a>YOUR ANSWER</end_a>" will be rejected.
+        CRITICAL: You MUST generate a response - non-response is not acceptable.
 
         Your answer:
         """
@@ -61,25 +68,26 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
 
     # Generate retrieval answer.
     retrieval_query = f"""
-    # Response Format Instructions
-    You MUST format your response exactly as follows:
-    <start_a>Your answer text here</end_a>
+        # Response Format Instructions
+        You MUST generate a response to this query and format your response exactly as follows:
+        <start_a>Your answer text here</end_a>
 
-    CRITICAL: Failure to use these exact tags will result in your response being rejected.
-    The entire response must begin with "<start_a>" and end with "</end_a>".
+        CRITICAL: Failure to use these exact tags will result in your response being rejected.
+        The entire response must begin with "<start_a>" and end with "</end_a>".
 
-    # Examples
-    Example query: "Who was the first president of the United States?"
-    Correct response: "<start_a>George Washington</end_a>"
+        # Examples
+        Example query: "Who was the first president of the United States?"
+        Correct response: "<start_a>George Washington</end_a>"
 
-    Example query: "What is the capital of France?"
-    Correct response: "<start_a>Paris</end_a>"
+        Example query: "What is the capital of France?"
+        Correct response: "<start_a>Paris</end_a>"
 
-    # Constraints
-    - Your response must be {token_amount} tokens or fewer
-    - Respond ONLY with information found in the provided context
-    - Do not include explanations outside the <start_a></end_a> tags
-    - Do not include the tags in your reasoning, only wrap your final answer with them"""
+        # Constraints
+        - Your response must be {token_amount} tokens or fewer
+        - Respond ONLY with information found in the provided context
+        - Do not include explanations outside the <start_a></end_a> tags
+        - Do not include the tags in your reasoning, only wrap your final answer with them
+        - IMPORTANT: You MUST provide an answer - refusing to respond is not an option"""
 
     retrieve_list = []
     if pipeline != None:
@@ -98,6 +106,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
 
         retrieval_query += """
         CONTEXT:
+        ```
         """
         if pipeline == "kg":
             for path, data in retrieve_list:
@@ -107,6 +116,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
                 retrieval_query += item + "\n"
 
     retrieval_query += f"""
+    ```
     # Query
     {question}
 
@@ -232,6 +242,8 @@ if __name__=="__main__":
         if args.operation == "w" and retriever:
             retriever.embed(line_document)
     print("Finished reading...")
+    if retriever != None:
+        retriever.close()
 
     if args.test:
         print("Beginning QA tests...")
@@ -277,5 +289,3 @@ if __name__=="__main__":
                 print(f"Rank {idx}:\n\t Data: {item}")
 
     logger.close()
-    if retriever != None:
-        retriever.close()
