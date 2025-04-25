@@ -27,7 +27,7 @@ class GoogleAgent:
                 # Note: This is an approximate conversion as tokens ≈ 4 characters
                 # We divide by 4 to convert characters to approximate token count
                 estimated_tokens = max(1, int(max_length / 4))
-                generation_config = genai.GenerationConfig(max_output_tokens=estimated_tokens)
+                generation_config = genai.GenerationConfig(max_output_tokens=estimated_tokens, min_output_tokens=20)
 
             response = self.model.generate_content(
                 query,
