@@ -189,10 +189,6 @@ class StoreTree:
                 elif u.data != None:
                     return_list.append((-avg_ip, {"path": nl_path, "data": u.data}))
 
-            # print("Retrieve List: ")
-            # for (score,path) in return_list:
-            #     print(f"\t Score: {score}\n\t Path:{path}")
-
             return [path_obj for (_, path_obj) in return_list]
 
     def range_query(self, q_embeddings, threshold=0.1):

@@ -25,18 +25,30 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         if hasattr(agent, "trim_context"):
             ground_truth_retrieve = agent.trim_context([ground_truth_retrieve])[0]
 
-        nq_query = f"""Answer the following query based ONLY on the provided context.
+        nq_query = f"""
+        SYSTEM: You are a precise question-answering assistant. Your task is to answer questions based ONLY on the provided context information. Follow the format instructions exactly.
 
-                IMPORTANT: Your answer MUST start with "<start_a>" and end with "</end_a>".
-                For example, if asked "Who was the first president of the United States?", you must reply "<start_a>George Washington</end_a>".
+        CONTEXT INFORMATION:
+        {ground_truth_retrieve}
 
-                Make your response under or equal to {token_amount} tokens. Use only the context to answer the query.
+        USER QUESTION:
+        {question}
 
-        CONTEXT:
-            {ground_truth_retrieve}
+        ANSWER INSTRUCTIONS:
+        1. Answer the question using ONLY information from the context above
+        2. Your answer MUST start with "<start_a>" and end with "</end_a>"
+        3. Keep your answer concise and under {token_amount} tokens
+        4. If the context doesn't contain the answer, respond with "<start_a>I cannot answer this question based on the provided context.</end_a>"
+        5. Do not include any information not present in the context
+        6. Do not include any reasoning, explanations, or notes outside the <start_a></end_a> tags
 
-        QUERY:
-            {question}
+        EXAMPLE FORMAT:
+        Question: "Who was the first president of the United States?"
+        Correct response: "<start_a>George Washington</end_a>"
+
+        IMPORTANT: ANY response without the exact format "<start_a>YOUR ANSWER</end_a>" will be rejected.
+
+        Your answer:
         """
         answer = agent.ask(nq_query, max_length = token_amount)
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
@@ -49,23 +61,45 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
 
     # Generate retrieval answer.
     retrieval_query = f"""
-            IMPORTANT: Your answer MUST start with "<start_a>" and end with "</end_a>".
-            For example, if asked "Who was the first president of the United States?", you must reply "<start_a>George Washington</end_a>".
+    # Response Format Instructions
+    You MUST format your response exactly as follows:
+    <start_a>Your answer text here</end_a>
 
-            Make your response under or equal to {token_amount} tokens."""
+    CRITICAL: Failure to use these exact tags will result in your response being rejected.
+    The entire response must begin with "<start_a>" and end with "</end_a>".
+
+    # Examples
+    Example query: "Who was the first president of the United States?"
+    Correct response: "<start_a>George Washington</end_a>"
+
+    Example query: "What is the capital of France?"
+    Correct response: "<start_a>Paris</end_a>"
+
+    # Constraints
+    - Your response must be {token_amount} tokens or fewer
+    - Respond ONLY with information found in the provided context
+    - Do not include explanations outside the <start_a></end_a> tags
+    - Do not include the tags in your reasoning, only wrap your final answer with them"""
+
     retrieve_list = []
     if pipeline != None:
         retrieve_list = retriever.retrieve(question)
         if hasattr(agent, "trim_context"):
             retrieve_list = agent.trim_context(retrieve_list)
 
-        retrieval_query += "Answer the following query based ONLY on the provided context."
+        retrieval_query += """
+        # Context Information
+        Answer based EXCLUSIVELY on the following context. If the context doesn't contain the answer, respond with "<start_a>The provided context does not contain information to answer this question.</end_a>"\n"""
+
         if pipeline == "kg":
-            retrieval_query += "We will provide data as context with an associated path of headings that lead to where to the data is located.\n"
+            retrieval_query += """
+            The context below contains data with an associated path of headings that show where the data is located.
+            Format: PATH: [heading path]. DATA: [content]\n"""
 
         retrieval_query += """
-        CONTEXT:\n"""
-        if args.pipeline == "kg":
+        CONTEXT:
+        """
+        if pipeline == "kg":
             for path, data in retrieve_list:
                 retrieval_query += f"PATH: {path}. DATA: {data}\n"
         else:
@@ -73,8 +107,11 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
                 retrieval_query += item + "\n"
 
     retrieval_query += f"""
-    QUERY:
-        {question}
+    # Query
+    {question}
+
+    Remember to format your answer EXACTLY as:
+    <start_a>Your answer based only on the provided context</end_a>
     """
     retrieval_answer = ""
     retry_cnt = 0
