@@ -243,6 +243,7 @@ if __name__=="__main__":
             retriever.embed(line_document)
     print("Finished reading...")
     if retriever != None:
+        print("Writing stores...")
         retriever.close()
 
     if args.test:
