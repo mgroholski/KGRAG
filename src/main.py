@@ -119,8 +119,6 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         ```
         """
         if pipeline == "kg":
-            print(retrieve_list)
-            exit()
             for path, data in retrieve_list:
                 retrieval_query += f"PATH: {path}. DATA: {data}\n"
         else:
