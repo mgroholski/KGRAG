@@ -74,10 +74,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
 
     if retry_cnt == 2 and not len(nq_answer):
         print(f"Could not generate ground answer for {nq_query}.")
-        nq_answer="Could not generate answer."
-
-
-    # Generate retrieval answer.
+        nq_answer="__FAILED_GENERATION__"
     retrieval_query = f"""
         # Response Format Instructions
         You MUST generate a response to this query and format your response exactly as follows:
@@ -152,7 +149,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
 
     if retry_cnt == 2 and not len(retrieval_answer):
         print(f"Could not generate answer for {retrieval_query}.")
-        retrieval_answer = "Could not generate answer."
+        retrieval_answer = "__FAILED_GENERATION__"
 
     # Logs the response of the query.
     logger.log(f"Question {idx + 1}")

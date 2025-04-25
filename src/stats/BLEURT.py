@@ -50,6 +50,7 @@ class BLEURT:
     def score(self, predictions, truths):
         """
         Calculate BLEURT scores between predictions and reference texts.
+        Failed generations (marked with __FAILED_GENERATION__) are scored as 0.
 
         Args:
             predictions (list): List of predicted text strings
@@ -60,10 +61,34 @@ class BLEURT:
         """
         try:
             self.logger.log("Computing BLEURT scores...")
-            scorer = bleurt_score.BleurtScorer(self.model_path)
-            scores = scorer.score(references=truths, candidates=predictions)
-            self.scores = scores
-            avg_score = sum(scores) / len(scores)
+            
+            # Create processed lists without failed generations
+            processed_predictions = []
+            processed_truths = []
+            original_indices = []
+            
+            self.scores = [0.0] * len(predictions)  # Initialize all scores to 0
+            
+            # First pass: identify failed generations and track valid pairs
+            for i, (pred, ref) in enumerate(zip(predictions, truths)):
+                if pred == "__FAILED_GENERATION__" or ref == "__FAILED_GENERATION__":
+                    print(f"Assigned zero BLEURT score to failed generation at index {i}")
+                    self.logger.log(f"Assigned zero BLEURT score to failed generation at index {i}")
+                else:
+                    processed_predictions.append(pred)
+                    processed_truths.append(ref)
+                    original_indices.append(i)
+            
+            # Score only the valid pairs
+            if processed_predictions and processed_truths:
+                scorer = bleurt_score.BleurtScorer(self.model_path)
+                valid_scores = scorer.score(references=processed_truths, candidates=processed_predictions)
+                
+                # Map scores back to their original positions
+                for idx, score in zip(original_indices, valid_scores):
+                    self.scores[idx] = score
+            
+            avg_score = sum(self.scores) / len(self.scores) if self.scores else 0
             self.logger.log(f"Average BLEURT score: {avg_score:.4f}")
 
             return avg_score

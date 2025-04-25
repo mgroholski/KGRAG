@@ -20,19 +20,30 @@ class BERTScore:
         """
         Calculate BERTScore for a list of predictions and ground truths.
         Returns precision, recall, and F1 scores.
+        Failed generations (marked with __FAILED_GENERATION__) are scored as 0.
         """
         self.scores = []
-        normalized_preds = [BERTScore.normalize_answer(pred) for pred in predictions]
-        normalized_refs = [BERTScore.normalize_answer(ref) for ref in truths]
-
-        for i, (pred, ref) in enumerate(zip(normalized_preds, normalized_refs)):
-            if len(pred.strip()) == 0 or len(ref.strip()) == 0:
+        
+        for i, (pred, ref) in enumerate(zip(predictions, truths)):
+            # Handle failed generations
+            if pred == "__FAILED_GENERATION__" or ref == "__FAILED_GENERATION__":
+                score = {'bert_precision': 0, 'bert_recall': 0, 'bert_f1': 0}
+                self.scores.append(score)
+                print(f"Assigned zero score to failed generation at index {i}")
+                self.logger.log(f"Assigned zero score to failed generation at index {i}")
+                continue
+                
+            # Normalize answers
+            normalized_pred = BERTScore.normalize_answer(pred)
+            normalized_ref = BERTScore.normalize_answer(ref)
+            
+            if len(normalized_pred.strip()) == 0 or len(normalized_ref.strip()) == 0:
                 score = {'bert_precision': 0, 'bert_recall': 0, 'bert_f1': 0}
                 self.scores.append(score)
                 continue
 
             try:
-                P, R, F1 = bert_score([pred], [ref], model_type=self.model, lang=self.lang, verbose=False)
+                P, R, F1 = bert_score([normalized_pred], [normalized_ref], model_type=self.model, lang=self.lang, verbose=False)
 
                 score = {
                     'bert_precision': P.mean().item(),

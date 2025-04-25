@@ -34,6 +34,7 @@ class chrF:
     def score(self, predictions, truths):
         """
         Calculate chrF scores between predictions and reference texts.
+        Failed generations (marked with __FAILED_GENERATION__) are scored as 0.
 
         Args:
             predictions (list): List of predicted text strings
@@ -46,7 +47,14 @@ class chrF:
             self.logger.log(f"Computing chrF scores (n_gram={self.n_gram}, beta={self.beta})...")
             scores = []
 
-            for pred, ref in zip(predictions, truths):
+            for i, (pred, ref) in enumerate(zip(predictions, truths)):
+                # Handle failed generations
+                if pred == "__FAILED_GENERATION__" or ref == "__FAILED_GENERATION__":
+                    scores.append(0.0)
+                    print(f"Assigned zero chrF score to failed generation at index {i}")
+                    self.logger.log(f"Assigned zero chrF score to failed generation at index {i}")
+                    continue
+                
                 precision_scores = []
                 recall_scores = []
 
