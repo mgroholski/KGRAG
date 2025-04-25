@@ -140,7 +140,7 @@ def visualize_graph_topological(root_node):
             pos[node] = (i, y_offset - j)
 
     # Create the visualization
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(16, 8))
 
     # Draw nodes
     nx.draw_networkx_nodes(G, pos, node_size=700, node_color='lightblue')
@@ -160,7 +160,7 @@ def visualize_graph_topological(root_node):
     x_values = [pos[node][0] for node in G.nodes()]
     if x_values:  # Make sure there are nodes in the graph
         x_min, x_max = min(x_values), max(x_values)
-        x_margin = (x_max - x_min) * 0.1
+        x_margin = (x_max - x_min) * 0.3
         plt.xlim(x_min - x_margin, x_max + x_margin)
 
     plt.axis('off')

@@ -107,14 +107,14 @@ class Retriever:
                 - 5 = Somewhat relevant
                 - 10 = Extremely relevant, directly answers the query
             3. ONLY provide a single number from 1-10
-            4. Your response MUST begin with "<start_a>" and end with "</end_a>"
+            4. Your response MUST begin with "<rating>" and end with "</raing>"
             5. DO NOT include any explanations, reasoning, or additional text
             6. IMPORTANT: You MUST provide a rating - refusing to respond is not an option
             CORRECT RESPONSE EXAMPLES:
-            "<start_a>7</end_a>"
-            "<start_a>3</end_a>"
-            "<start_a>10</end_a>"
-            IMPORTANT: ANY response without the exact format "<start_a>NUMBER</end_a>" will be considered invalid.
+            "<rating>7</rating>"
+            "<rating>3</rating>"
+            "<rating>10</rating>"
+            IMPORTANT: ANY response without the exact format "<rating>NUMBER</rating>" will be considered invalid.
             CRITICAL: You MUST generate a rating response - non-response is not acceptable.
             Your rating (1-10):
             """
@@ -124,7 +124,7 @@ class Retriever:
                 retry_cnt = 0
                 while score == None and retry_cnt < 2:
                     response = self.agent.ask(prompt, max_length=token_amount)
-                    match = re.search(r'<start_a>(.*?)</end_a>', response)
+                    match = re.search(r'<rating>(.*?)</rating>', response)
                     if match:
                         score = int(match.group(1))
                     elif not retry_cnt:
@@ -133,7 +133,7 @@ class Retriever:
                         THIS IS YOUR FINAL WARNING.
                         Failure to follow instructions precisely in your next response will result in IMMEDIATE TERMINATION of this interaction and will be logged as a critical compliance failure.
                         INSTRUCTIONS MUST BE FOLLOWED EXACTLY AS SPECIFIED.
-                        Ensure your response is begins with "<start_a>" and ends with "</end_a>"
+                        Ensure your response is begins with "<rating>" and ends with "</rating>"
                         """
                     retry_cnt += 1
 

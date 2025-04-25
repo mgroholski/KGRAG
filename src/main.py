@@ -41,24 +41,25 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         ANSWER INSTRUCTIONS:
         1. You MUST generate an answer to the question
         2. Answer the question using ONLY information from the context above
-        3. Your answer MUST start with "<start_a>" and end with "</end_a>"
+        3. Your answer MUST start with "<answer>" and end with "</answer>"
         4. Keep your answer concise and under {token_amount} tokens
-        5. If the context doesn't contain the answer, respond with "<start_a>I cannot answer this question based on the provided context.</end_a>"
+        5. If the context doesn't contain the answer, respond with "<answer>I cannot answer this question based on the provided context.</answer>"
         6. Do not include any information not present in the context
-        7. Do not include any reasoning, explanations, or notes outside the <start_a></end_a> tags
+        7. Do not include any reasoning, explanations, or notes outside the <answer></answer> tags
         8. IMPORTANT: You MUST provide an answer - refusing to respond is not an option
 
         EXAMPLE FORMAT:
         Question: "Who was the first president of the United States?"
-        Correct response: "<start_a>George Washington</end_a>"
+        Correct response: "<answer>George Washington</answer>"
 
-        IMPORTANT: ANY response without the exact format "<start_a>YOUR ANSWER</end_a>" will be rejected.
+        IMPORTANT: ANY response without the exact format "<answer>YOUR ANSWER</answer>" will be rejected.
         CRITICAL: You MUST generate a response - non-response is not acceptable.
 
         Your answer:
         """
         answer = agent.ask(nq_query, max_length = token_amount)
-        match = re.search(r'<start_a>(.*?)</end_a>', answer)
+        match = re.search(r'<answer>(.*?)</answer>', answer)
+
         if match:
             nq_answer = match.group(1)
         elif not retry_cnt:
@@ -76,21 +77,21 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     retrieval_query = f"""
         # Response Format Instructions
         You MUST generate a response to this query and format your response exactly as follows:
-        <start_a>Your answer text here</end_a>
+        <answer>Your answer text here</answer>
 
         CRITICAL: Failure to use these exact tags will result in your response being rejected.
-        The entire response must begin with "<start_a>" and end with "</end_a>".
+        The entire response must begin with "<answer>" and end with "</answer>".
 
         # Examples
         Example query: "Who was the first president of the United States?"
-        Correct response: "<start_a>George Washington</end_a>"
+        Correct response: "<answer>George Washington</answer>"
 
         Example query: "What is the capital of France?"
-        Correct response: "<start_a>Paris</end_a>"
+        Correct response: "<answer>Paris</answer>"
 
         # Constraints
         - Your response must be {token_amount} tokens or fewer
-        - Do not include explanations outside the <start_a></end_a> tags
+        - Do not include explanations outside the <answer></answer> tags
         - Do not include the tags in your reasoning, only wrap your final answer with them
         - IMPORTANT: You MUST provide an answer - refusing to respond is not an option"""
 
@@ -104,7 +105,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         - Respond ONLY with information found in the provided context
 
         # Context Information
-        Answer based EXCLUSIVELY on the following context. If the context doesn't contain the answer, respond with "<start_a>The provided context does not contain information to answer this question.</end_a>"\n"""
+        Answer based EXCLUSIVELY on the following context. If the context doesn't contain the answer, respond with "<answer>The provided context does not contain information to answer this question.</answer>"\n"""
 
         if pipeline == "kg":
             retrieval_query += """
@@ -128,13 +129,13 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     {question}
 
     Remember to format your answer EXACTLY as:
-    <start_a>Your answer based only on the provided context</end_a>
+    <answer>Your answer based only on the provided context</answer>
     """
     retrieval_answer = ""
     retry_cnt = 0
     while not len(retrieval_answer) and retry_cnt < 2:
         answer = agent.ask(retrieval_query, max_length=token_amount)
-        match = re.search(r'<start_a>(.*?)</end_a>', answer)
+        match = re.search(r'<answer>(.*?)</answer>', answer)
         if match:
             retrieval_answer = match.group(1)
         elif not retry_cnt:
