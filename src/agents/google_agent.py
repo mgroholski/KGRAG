@@ -25,7 +25,7 @@ class GoogleAgent:
             generation_config = None
             if max_length is not None:
                 max_length = 256
-            generation_config = genai.GenerationConfig(max_output_tokens=max_length, temperature=0.4, top_p=0.7)
+            generation_config = genai.GenerationConfig(max_output_tokens=max_length, temperature=0.3, top_p=0.7)
 
             response = self.model.generate_content(
                 query,

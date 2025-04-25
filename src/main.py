@@ -59,9 +59,6 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
         """
         answer = agent.ask(nq_query, max_length = token_amount)
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
-        print("Gemini Answer: ", answer)
-        print("Match: ", match)
-
         if match:
             nq_answer = match.group(1)
         elif not retry_cnt:

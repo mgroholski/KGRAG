@@ -95,7 +95,7 @@ def visualize_graph_with_cycle_detection(root_node):
 
     return G, cycles
 
-def visualize_graph_topological(root_node):
+def visualize_graph_topological(root_node, figsize=(12, 8), node_size=700, margin=0.2):
     # Create a directed graph
     G = nx.DiGraph()
 
@@ -121,18 +121,27 @@ def visualize_graph_topological(root_node):
 
     # Create positions for each node based on topological order
     pos = {}
+    max_width = len(topo_generations)
+    max_height = max(len(gen) for gen in topo_generations) if topo_generations else 0
+    
     for i, generation in enumerate(topo_generations):
         for j, node in enumerate(generation):
-            # Place nodes in topological order (left to right)
-            # Center each generation vertically
+            # Normalize coordinates to fit the graph
+            x = i / max(1, max_width - 1) if max_width > 1 else 0.5
             y_offset = (len(generation) - 1) / 2
-            pos[node] = (i, y_offset - j)
+            y = (y_offset - j) / max(1, max_height)
+            
+            # Scale the positions to leave margins
+            x = margin + x * (1 - 2 * margin)
+            y = margin + (y + 0.5) * (1 - 2 * margin)
+            
+            pos[node] = (x, y)
 
     # Create the visualization
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=figsize)
 
     # Draw nodes
-    nx.draw_networkx_nodes(G, pos, node_size=700, node_color='lightblue')
+    nx.draw_networkx_nodes(G, pos, node_size=node_size, node_color='lightblue')
 
     # Draw edges
     nx.draw_networkx_edges(G, pos, width=1.5, arrowsize=20, edge_color='gray',
@@ -143,7 +152,12 @@ def visualize_graph_topological(root_node):
 
     plt.axis('off')
     plt.title('Directed Graph - Topological Order')
+    
+    # Adjust plot limits to ensure all nodes are visible
+    plt.xlim(-0.05, 1.05)
+    plt.ylim(-0.05, 1.05)
+    
     plt.tight_layout()
     plt.show()
 
-    # return G
+    return G

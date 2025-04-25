@@ -49,7 +49,7 @@ class LlamaAgent:
             max_new_tokens=max_length,
             min_new_tokens=20,
             do_sample=True,
-            temperature=0.4,
+            temperature=0.3,
             top_p=0.7,
             pad_token_id=self.tokenizer.eos_token_id,
             use_cache=False
