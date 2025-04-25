@@ -2,6 +2,7 @@ import argparse, os, nltk
 from sentence_transformers.SentenceTransformer import SentenceTransformer
 from agents.llama_agent import LlamaAgent
 from kgrag.retriever import Retriever as kg_retriever
+from trag.retriever import Retriever as trag_retriever
 from chunkrag.retriever import Retriever as chunk_retriever
 from vanillarag.retriever import VanillaRetriever as vanilla_retriever
 from nltk.tokenize import sent_tokenize
@@ -161,7 +162,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Embeds the table data and allows for path retrieval.")
     parser.add_argument('filepath')
-    parser.add_argument('--pipeline','-p', default="none", choices=["kg","chunk","vanilla","none"], help="The pipeline to run on.")
+    parser.add_argument('--pipeline','-p', default="none", choices=["kg","chunk","vanilla","none", "trag"], help="The pipeline to run on.")
     parser.add_argument('--agent', '-a', default="llama", choices=["google", "llama"], help="Specifies which agent to use to test.")
     parser.add_argument('--verbose', '-v', action='store_true', help="Verbose. Enables graph visualizations and prints distances rankings.")
     parser.add_argument('--num-lines', '-n', type=int, default=None, help="Number of elements to load from the input file (default: All lines).")
@@ -213,6 +214,8 @@ if __name__=="__main__":
         retriever = vanilla_retriever(embedding_info, store_info, agent, args.verbose)
     elif args.pipeline == "none":
         args.pipeline = None
+    elif args.pipeline == "trag":
+        args.pipeline == trag_retriever(embedding_info, store_info, agent, args.verbose)
     else:
         raise Exception("Invlaid pipeline name.")
 
