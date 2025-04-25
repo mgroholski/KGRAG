@@ -81,6 +81,7 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     retry_cnt = 0
     while not len(retrieval_answer) and retry_cnt < 10:
         answer = agent.ask(retrieval_query, max_length=token_amount)
+        print("A: ", answer)
         match = re.search(r'<start_a>(.*?)</end_a>', answer)
         if match:
             retrieval_answer = match.group(1)
