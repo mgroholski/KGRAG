@@ -25,9 +25,6 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     nq_answer = ""
     retry_cnt = 0
     while not len(nq_answer) and retry_cnt < 2:
-        if hasattr(agent, "trim_context"):
-            ground_truth_retrieve = agent.trim_context([ground_truth_retrieve])[0]
-
         nq_query = f"""
         SYSTEM: You are a precise question-answering assistant. Your task is to answer questions based ONLY on the provided context information. Follow the format instructions exactly.
 
@@ -100,8 +97,6 @@ def get_responses(idx, objects, question, ground_truth_retrieve):
     retrieve_list = []
     if pipeline != None:
         retrieve_list = retriever.retrieve(question)
-        if hasattr(agent, "trim_context") and pipeline != "kg":
-            retrieve_list = agent.trim_context(retrieve_list)
 
         retrieval_query += """
         - Respond ONLY with information found in the provided context

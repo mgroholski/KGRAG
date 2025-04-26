@@ -94,9 +94,6 @@ class Retriever:
         token_amount = 128
         filtered_chunks = []
         for chunk in combined:
-            if hasattr(self.agent, "trim_context"):
-                chunk = self.agent.trim_context([chunk])[0]
-
             prompt = f"""
             SYSTEM: You are a helpful and precise assistant. Your task is to rate the relevance of information chunks to user queries on a scale of 1-10. You MUST follow the format instructions exactly and MUST provide a rating.
             USER QUERY: ```{query}```
