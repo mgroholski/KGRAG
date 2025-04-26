@@ -64,6 +64,7 @@ class Retriever:
             self.store.write(chunk_embeddings, chunk)
 
     def retrieve(self, query) -> list[str]:
+        k = 3
         # Lazy BM25 init if not yet done
         if self.bm25_model is None and self.store.metadata:
             self.all_chunks = self.store.metadata
@@ -72,13 +73,13 @@ class Retriever:
 
         # Dense retrieval (top 5)
         q_embedding = self.model.encode([query])
-        dense_results = self.store.nn_query(q_embedding, 5)
+        dense_results = self.store.nn_query(q_embedding, k)
 
         # Sparse retrieval (BM25, top 5)
         sparse_results = []
         if self.bm25_model:
             sparse_scores = self.bm25_model.get_scores(word_tokenize(query.lower()))
-            sparse_ranked = sorted(zip(sparse_scores, self.all_chunks), reverse=True)[:5]
+            sparse_ranked = sorted(zip(sparse_scores, self.all_chunks), reverse=True)[:k]
             sparse_results = [chunk for _, chunk in sparse_ranked]
 
         # Combine and deduplicate

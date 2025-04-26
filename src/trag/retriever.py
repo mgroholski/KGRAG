@@ -30,7 +30,7 @@ class Retriever:
 
     def retrieve(self, query) -> list[str]:
         query_embedding = self.model.encode([query])
-        retrieved_tables = self.store.nn_query(query_embedding, 1)  # Top 5 nearest neighbors
+        retrieved_tables = self.store.nn_query(query_embedding, 1)
         return retrieved_tables
 
     def close(self):
