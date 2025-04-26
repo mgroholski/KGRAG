@@ -1,7 +1,9 @@
 import numpy as np
 import torch
 from transformers import AutoModel, AutoTokenizer, AutoModelForSeq2SeqLM
-from utils.store_utils import Store
+from utils.store_ds.store_mat import StoreMat
+from bs4 import BeautifulSoup
+from kgrag.graph_utils import extract_first_level_tags
 
 class LIRAGERetriever:
     def __init__(self, embedding_info, store_info, agent=None, verbose=False):
@@ -11,34 +13,39 @@ class LIRAGERetriever:
 
         self.retriever = AutoModel.from_pretrained("colbert-ir/colbertv2.0").to(self.device).eval()
         self.ret_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        self.embedding_dim = self.retriever.config.hidden_size
 
         self.reader = AutoModelForSeq2SeqLM.from_pretrained("microsoft/tapex-large").to(self.device).eval()
         self.read_tokenizer = AutoTokenizer.from_pretrained("microsoft/tapex-large")
 
-        self.store = Store(embedding_info['model_dim'], store_info["storepath"], verbose)
+        self.store = StoreMat(self.embedding_dim, store_info["storepath"], store_info["operation"], verbose)
         self.operation = store_info["operation"]
-        self.tables = []
-        self.table_embs = []
+
 
     def embed(self, corpus):
+        # Corpus is a HTML document
+        corpus_soup = BeautifulSoup(corpus, "lxml").html.body
 
-        flat_text = corpus.strip()
-        self.tables.append(flat_text)
+        # filters the html for all first-level tables
+        tables = extract_first_level_tags(corpus_soup, ["table"])
+        # filters the html for all first-level tables
+        for table in tables:
+            flat_text = str(table)
 
-        table_embedding = self.retriever(
-            **self.ret_tokenizer(
-                flat_text,
-                return_tensors='pt',
-                truncation=True,
-                padding='max_length',
-                max_length=512
-            ).to(self.device)
-        ).last_hidden_state.squeeze(0)
+            table_embedding = self.retriever(
+                **self.ret_tokenizer(
+                    flat_text,
+                    return_tensors='pt',
+                    truncation=True,
+                    padding='max_length',
+                    max_length=512
+                ).to(self.device)
+            ).last_hidden_state.squeeze(0)
 
-        self.table_embs.append(table_embedding)
-        self.store.write(table_embedding.detach().cpu().numpy(), flat_text)
+            t_emb = table_embedding.detach().cpu().numpy()
+            self.store.write(t_emb, flat_text)
 
-    def retrieve(self, q, k=5):
+    def retrieve(self, q, k=3):
         q_emb = self.retriever(
             **self.ret_tokenizer(
                 q,
@@ -48,19 +55,9 @@ class LIRAGERetriever:
                 max_length=32
             ).to(self.device)
         ).last_hidden_state.squeeze(0)
-        # normalize query embeddings
-        q_emb = q_emb / torch.norm(q_emb, dim=1, keepdim=True)
 
-        scores = []
-        for table in self.table_embs:
-            table = table / torch.norm(table, dim=1, keepdim=True)
-            sim = torch.matmul(q_emb, table.T)
-            score = torch.max(sim, dim=1).values.sum().item()
-            scores.append(score)
-
-        top_k_idx = np.argpartition(scores, -k)[-k:]
-        return [self.tables[i] for i in top_k_idx]
-
+        q_emb_np = q_emb.detach().cpu().numpy()
+        return self.store.nn_query(q_emb_np, k=k)
 
     def close(self):
         if self.operation != "r":

@@ -47,7 +47,7 @@ def _clean_text(text):
 def _clean_int(text)->int:
     return int(re.sub(r'[^0-9]', '', text))
 
-def _extract_first_level_tags(soup, tags):
+def extract_first_level_tags(soup, tags):
     found_tags = soup.find_all(tags)
     first_level_tags = []
     seen_tags = set()
@@ -64,7 +64,7 @@ def _extract_first_level_tags(soup, tags):
 def _extract_table_graph(soup, root=None):
     cur_parent = root
 
-    table_rows = _extract_first_level_tags(soup, ["tr"])
+    table_rows = extract_first_level_tags(soup, ["tr"])
     col_headings = []
 
     data_between = True
@@ -262,7 +262,7 @@ def extract_relationship_graphs(simple_text: str):
 
     root = Node(_clean_text(title.text), NodeTagType.TITLE)
 
-    first_level_tags = _extract_first_level_tags(soup, ["h2", "h3", "table"])
+    first_level_tags = extract_first_level_tags(soup, ["h2", "h3", "table"])
 
     cur_table_section = root
     cur_section = root
